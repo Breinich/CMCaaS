@@ -16,7 +16,6 @@ import java.nio.charset.StandardCharsets;
  * enclave.RobustEnclaveApp
  */
 public class VerifierRunner {
-    private static final int PORT = 7777;
     private static final String SHARED_DIR = "/host";
 
     private PrivateKey privateKey;
@@ -208,11 +207,11 @@ public class VerifierRunner {
         return encryptResults(result_name);
     }
 
-    public VerifierRunner() throws Exception {
+    public VerifierRunner(int port) throws Exception {
         generateKeyPair();
 
-        try (ServerSocket server = new ServerSocket(PORT, 10, InetAddress.getByName("127.0.0.1"))) {
-            System.out.println("Verifier enclave listening on 127.0.0.1:" + PORT);
+        try (ServerSocket server = new ServerSocket(port, 10, InetAddress.getByName("127.0.0.1"))) {
+            System.out.println("Verifier enclave listening on 127.0.0.1:" + port);
 
             Socket client = server.accept();
             Thread t = new Thread(() -> {
@@ -263,7 +262,8 @@ public class VerifierRunner {
     }
 
     public static void main(String[] args) throws Exception {
-        new VerifierRunner();
+        int port = Integer.parseInt(args[0]);
+        new VerifierRunner(port);
     }
 }
 

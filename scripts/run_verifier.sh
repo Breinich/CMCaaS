@@ -1,0 +1,73 @@
+#!/bin/bash
+set -e
+
+BLUE='\033[1;34m'
+NC='\033[0m'
+
+show_usage() {
+    echo "Usage: $0 verifier <ENCLAVE_ID>"
+    echo "Example: $0 verifier 001"
+    exit 1
+}
+
+check_file_exist() {
+    file=$1
+    if [ ! -f "${file}" ]; then
+        echo "Error: cannot stat file '${file}'"
+        echo "Please compile VerifierRunner.java first"
+        exit 1
+    fi
+}
+
+init_instance() {
+    enclave_id=$1
+    instance_name="occlum_verifier_${enclave_id}"
+
+    rm -rf "${instance_name}" && mkdir "${instance_name}"
+    cd "${instance_name}"
+    occlum init
+
+    # Tune Occlum.json for JVM
+    new_json="$(jq '.resource_limits.user_space_size = "1MB" |
+                    .resource_limits.user_space_max_size = "6000MB" |
+                    .resource_limits.kernel_space_heap_size = "1MB" |
+                    .resource_limits.kernel_space_heap_max_size = "64MB" |
+                    .resource_limits.max_num_of_threads = 64 |
+                    .process.default_heap_size = "512MB" |
+                    .entry_points = ["/usr/lib/jvm/java-11-alibaba-dragonwell/jre/bin"] |
+                    .env.default = ["LD_LIBRARY_PATH=/usr/lib/jvm/java-11-alibaba-dragonwell/jre/lib/server:/usr/lib/jvm/java-11-alibaba-dragonwell/jre/lib:/usr/lib/jvm/java-11-alibaba-dragonwell/jre/../lib"]' Occlum.json)"
+    echo "${new_json}" > Occlum.json
+}
+
+
+build_verifier() {
+    # Copy JVM and VerifierRunner class file into Occlum instance and build
+    rm -rf image
+    copy_bom -f ../verifier.yaml --root image --include-dir /opt/occlum/etc/template
+    occlum build
+}
+
+run_verifier() {
+    enclave_id=$1
+    port_number=$2
+    verifier_class=./verifier/VerifierRunner.class
+
+    check_file_exist ${verifier_class}
+    init_instance "${enclave_id}"
+    build_verifier
+
+    echo -e "${BLUE}occlum run JVM VerifierRunner (enclave id=${enclave_id})${NC}"
+    occlum run /usr/lib/jvm/java-11-alibaba-dragonwell/jre/bin/java \
+        -Xmx512m -XX:-UseCompressedOops -XX:MaxMetaspaceSize=64m -Dos.name=Linux VerifierRunner "${port_number}"
+}
+
+# --- main ---
+arg=$1
+enclave_id=$2
+port_number=$3
+
+if [ "$arg" != "verifier" ] || [ -z "$enclave_id" ] || [ -z "$port_number" ]; then
+    show_usage
+fi
+
+run_verifier "${enclave_id}" "${port_number}"
