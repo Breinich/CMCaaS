@@ -43,13 +43,13 @@ init_instance() {
 build_verifier() {
     # Copy JVM and VerifierRunner class file into Occlum instance and build
     rm -rf image
-    copy_bom -f ../verifier.yaml --root image --include-dir /opt/occlum/etc/template
+    copy_bom -f /app/src/enclave/verifier.yaml --root image --include-dir /opt/occlum/etc/template
     occlum build
 }
 
 run_verifier() {
     enclave_id=$1
-    verifier_class=./verifier/VerifierRunner.class
+    verifier_class=/app/src/enclave/VerifierRunner.class
 
     check_file_exist ${verifier_class}
     init_instance "${enclave_id}"
