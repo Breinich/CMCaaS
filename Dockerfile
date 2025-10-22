@@ -5,7 +5,7 @@ LABEL description="Docker image for running the CMCaaS server on an Intel SGX en
 LABEL version="1.0.0"
 
 # Install necessary packages
-RUN apt-get update && apt-get install -y openjdk-21-jdk maven jq supervisor  && \
+RUN apt-get update && apt-get install -y openjdk-21-jdk maven jq supervisor sqlite3  && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
