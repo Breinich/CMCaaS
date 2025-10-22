@@ -4,15 +4,12 @@ import hu.bajnok.cmcass.proxyserver.model.Process;
 import hu.bajnok.cmcass.proxyserver.model.User;
 import hu.bajnok.cmcass.proxyserver.repository.ProcessRepository;
 import org.springframework.security.core.userdetails.*;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import hu.bajnok.cmcass.proxyserver.repository.UserRepository;
 
-import java.util.Collections;
-
 @Service
-public class DataBaseService implements UserDetailsService {
+public class DataBaseService {
 
     private final UserRepository userRepository;
     private final ProcessRepository processRepository;
@@ -22,18 +19,6 @@ public class DataBaseService implements UserDetailsService {
         this.userRepository = userRepository;
         this.processRepository = processRepository;
         this.passwordEncoder = passwordEncoder;
-    }
-
-    @Override
-    public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
-        User user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
-
-        return new org.springframework.security.core.userdetails.User(
-                user.getUsername(),
-                user.getPassword(),
-                Collections.singletonList(new SimpleGrantedAuthority(user.getRole()))
-        );
     }
 
     public void addProcess(String username, int processId, String processKey) {
