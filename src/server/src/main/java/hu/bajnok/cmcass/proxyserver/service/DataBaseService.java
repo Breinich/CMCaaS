@@ -46,7 +46,7 @@ public class DataBaseService {
     public void stopProcess(String username, String processKey) {
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new UsernameNotFoundException("User not found"));
-        processRepository.deleteByKeyAndUserId(processKey, user.getId());
+        processRepository.deleteByKeyAndUser_Id(processKey, user.getId());
         userRepository.save(user);
     }
 

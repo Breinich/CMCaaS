@@ -1,7 +1,6 @@
 package hu.bajnok.cmcass.proxyserver.repository;
 
 import hu.bajnok.cmcass.proxyserver.model.Process;
-import hu.bajnok.cmcass.proxyserver.model.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 
@@ -11,7 +10,7 @@ import java.util.Optional;
 public interface ProcessRepository extends JpaRepository<Process, Integer> {
     Optional<Process> findByKeyAndUserId(String key, Long userId);
 
-    void deleteByKeyAndUserId(String key, Long userId);
+    void deleteByKeyAndUser_Id(String key, Long userId);
 
     @Query("SELECT p.id FROM Process p")
     List<Integer> findAllProcessIds();
