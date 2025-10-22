@@ -274,7 +274,7 @@ public class RemoteClient {
         }
     }
 
-    public static void main(String[] args) throws Exception {
+    public static void main(String[] args) {
 
         Console cnsl = System.console();
 
