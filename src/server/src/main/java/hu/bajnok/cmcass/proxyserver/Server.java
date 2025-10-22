@@ -1,4 +1,4 @@
-package hu.bajnok;
+package hu.bajnok.cmcass.proxyserver;
 
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 

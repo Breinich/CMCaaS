@@ -1,4 +1,4 @@
-package hu.bajnok.model;
+package hu.bajnok.cmcass.proxyserver.model;
 
 import jakarta.persistence.*;
 import lombok.Getter;

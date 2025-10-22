@@ -1,7 +1,7 @@
-package hu.bajnok.controller;
+package hu.bajnok.cmcass.proxyserver.controller;
 
-import hu.bajnok.service.DataBaseService;
-import hu.bajnok.service.EnclaveService;
+import hu.bajnok.cmcass.proxyserver.service.DataBaseService;
+import hu.bajnok.cmcass.proxyserver.service.EnclaveService;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;

@@ -1,4 +1,4 @@
-package hu.bajnok.service;
+package hu.bajnok.cmcass.proxyserver.service;
 
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;

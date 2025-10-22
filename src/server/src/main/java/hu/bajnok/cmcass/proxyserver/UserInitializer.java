@@ -1,7 +1,7 @@
-package hu.bajnok;
+package hu.bajnok.cmcass.proxyserver;
 
-import hu.bajnok.model.User;
-import hu.bajnok.repository.UserRepository;
+import hu.bajnok.cmcass.proxyserver.model.User;
+import hu.bajnok.cmcass.proxyserver.repository.UserRepository;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;

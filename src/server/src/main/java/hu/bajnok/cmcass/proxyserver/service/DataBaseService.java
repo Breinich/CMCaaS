@@ -1,13 +1,13 @@
-package hu.bajnok.service;
+package hu.bajnok.cmcass.proxyserver.service;
 
-import hu.bajnok.model.Process;
-import hu.bajnok.model.User;
-import hu.bajnok.repository.ProcessRepository;
+import hu.bajnok.cmcass.proxyserver.model.Process;
+import hu.bajnok.cmcass.proxyserver.model.User;
+import hu.bajnok.cmcass.proxyserver.repository.ProcessRepository;
 import org.springframework.security.core.userdetails.*;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
-import hu.bajnok.repository.UserRepository;
+import hu.bajnok.cmcass.proxyserver.repository.UserRepository;
 
 import java.util.Collections;
 

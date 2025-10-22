@@ -1,7 +1,7 @@
-package hu.bajnok.repository;
+package hu.bajnok.cmcass.proxyserver.repository;
 
-import hu.bajnok.model.Process;
-import hu.bajnok.model.User;
+import hu.bajnok.cmcass.proxyserver.model.Process;
+import hu.bajnok.cmcass.proxyserver.model.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;

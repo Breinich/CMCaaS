@@ -1,4 +1,4 @@
-package hu.bajnok.config;
+package hu.bajnok.cmcass.proxyserver.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
