@@ -38,7 +38,7 @@ public class DataBaseService {
     public int getProcessId(String username, String processKey) {
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new UsernameNotFoundException("User not found"));
-        return processRepository.findByKeyAndUser(processKey, user)
+        return processRepository.findByKeyAndUserId(processKey, user.getId())
                 .orElseThrow(() -> new IllegalArgumentException("Invalid process key"))
                 .getId();
     }
@@ -46,7 +46,7 @@ public class DataBaseService {
     public void stopProcess(String username, String processKey) {
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new UsernameNotFoundException("User not found"));
-        processRepository.deleteByKeyAndUser(processKey, user);
+        processRepository.deleteByKeyAndUserId(processKey, user.getId());
         userRepository.save(user);
     }
 

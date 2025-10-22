@@ -9,9 +9,9 @@ import java.util.List;
 import java.util.Optional;
 
 public interface ProcessRepository extends JpaRepository<Process, Integer> {
-    Optional<Process> findByKeyAndUser(String key, User user);
+    Optional<Process> findByKeyAndUserId(String key, Long userId);
 
-    void deleteByKeyAndUser(String key, User user);
+    void deleteByKeyAndUserId(String key, Long userId);
 
     @Query("SELECT p.id FROM Process p")
     List<Integer> findAllProcessIds();
