@@ -141,6 +141,7 @@ public class EnclaveService {
         // 1. Get the process related to the user
         int processId;
         try {
+            logger.debug("Retrieving process ID for user: {} with process key: {}", username, processKey);
             processId = dbService.getProcessId(username, processKey);
         }
         catch (IllegalArgumentException e) {

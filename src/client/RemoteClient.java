@@ -203,6 +203,12 @@ public class RemoteClient {
             data.put("publicKey", enclavePubB64);
             String boundary = "----WebKitFormBoundary" + System.currentTimeMillis();
 
+            System.out.println("Sending processing request to " + baseUrl + "/process");
+            System.out.println("Request body will include boundary: " + boundary);
+            System.out.println("Client Data: " + payloadB64);
+            System.out.println("File Path: " + encFilePath);
+            System.out.println("Public Key: " + enclavePubB64);
+
             response = httpClient.send(
                     java.net.http.HttpRequest.newBuilder()
                             .uri(new java.net.URI(baseUrl + "/process"))
@@ -212,6 +218,8 @@ public class RemoteClient {
                             .build(),
                     java.net.http.HttpResponse.BodyHandlers.ofByteArray()
             );
+
+            System.out.println("Received response: status=" + response.statusCode());
 
             if (response.statusCode() != 200) {
                 throw new RuntimeException("Failed to process file: " + new String(response.body(), StandardCharsets.UTF_8));
