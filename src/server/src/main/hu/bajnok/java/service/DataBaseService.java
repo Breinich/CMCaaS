@@ -1,0 +1,82 @@
+package hu.bajnok.java.service;
+
+import hu.bajnok.java.model.Process;
+import hu.bajnok.java.model.User;
+import hu.bajnok.java.repository.ProcessRepository;
+import org.springframework.security.core.userdetails.*;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
+import hu.bajnok.java.repository.UserRepository;
+
+import java.util.Collections;
+
+@Service
+public class DataBaseService implements UserDetailsService {
+
+    private final UserRepository userRepository;
+    private final ProcessRepository processRepository;
+    private final PasswordEncoder passwordEncoder;
+
+    public DataBaseService(UserRepository userRepository, ProcessRepository processRepository, PasswordEncoder passwordEncoder) {
+        this.userRepository = userRepository;
+        this.processRepository = processRepository;
+        this.passwordEncoder = passwordEncoder;
+    }
+
+    @Override
+    public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+
+        return new org.springframework.security.core.userdetails.User(
+                user.getUsername(),
+                user.getPassword(),
+                Collections.singletonList(new SimpleGrantedAuthority(user.getRole()))
+        );
+    }
+
+    public void addProcess(String username, int processId, String processKey) {
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+        Process process = new Process();
+        process.setId(processId);
+        process.setKey(processKey);
+        user.addProcess(process);
+        processRepository.save(process);
+        userRepository.save(user);
+    }
+
+    public int getProcessId(String username, String processKey) {
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+        return processRepository.findByKeyAndUser(processKey, user)
+                .orElseThrow(() -> new IllegalArgumentException("Invalid process key"))
+                .getId();
+    }
+
+    public void stopProcess(String username, String processKey) {
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+        processRepository.findByKeyAndUser(processKey, user).ifPresent(user::removeProcess);
+        processRepository.deleteByKeyAndUser(processKey, user);
+        userRepository.save(user);
+    }
+
+    public int getNewProcessId() {
+        return processRepository.findAllProcessIds().stream()
+                .max(Integer::compareTo)
+                .orElse(0) + 1;
+    }
+
+    public void registerUser(String username, String password) {
+        if (userRepository.findByUsername(username).isPresent()) {
+            throw new IllegalArgumentException("Username already exists");
+        }
+        User user = new User();
+        user.setUsername(username);
+        user.setPassword(passwordEncoder.encode(password));
+        user.setRole("USER");
+        userRepository.save(user);
+    }
+}
