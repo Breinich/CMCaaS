@@ -17,10 +17,9 @@ COPY scripts/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 
 COPY scripts /app/scripts/
 RUN chmod +x /app/scripts/*
-COPY src/server/pom.xml app/src/server/
 
 # Build the application
-RUN cd app/src/server && mvn clean package
+RUN cd src/server && mvn clean package
 
 # Initialize Occlum environment
 RUN occlum-javac src/enclave/VerifierRunner.java -d /app/src/enclave/
