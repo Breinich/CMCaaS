@@ -106,6 +106,33 @@ public class RemoteClient {
         return Base64.getEncoder().encodeToString(buf.array());
     }
 
+    private static HttpRequest.BodyPublisher ofMultipartData(Map<Object, Object> data, String boundary) throws Exception {
+        var byteArrays = new java.util.ArrayList<byte[]>();
+        String LINE_FEED = "\r\n";
+
+        for (Map.Entry<Object, Object> entry : data.entrySet()) {
+            byteArrays.add(("--" + boundary + LINE_FEED).getBytes(StandardCharsets.UTF_8));
+            if (entry.getValue() instanceof Path) {
+                Path path = (Path) entry.getValue();
+                String mimeType = Files.probeContentType(path);
+                byteArrays.add(("Content-Disposition: form-data; name=\"" + entry.getKey() +
+                        "\"; filename=\"" + path.getFileName() + "\"" + LINE_FEED).getBytes(StandardCharsets.UTF_8));
+                byteArrays.add(("Content-Type: " + (mimeType != null ? mimeType : "application/octet-stream") + LINE_FEED).getBytes(StandardCharsets.UTF_8));
+                byteArrays.add(LINE_FEED.getBytes(StandardCharsets.UTF_8));
+                byteArrays.add(Files.readAllBytes(path));
+                byteArrays.add(LINE_FEED.getBytes(StandardCharsets.UTF_8));
+            } else {
+                byteArrays.add(("Content-Disposition: form-data; name=\"" + entry.getKey() + "\"" + LINE_FEED).getBytes(StandardCharsets.UTF_8));
+                byteArrays.add(LINE_FEED.getBytes(StandardCharsets.UTF_8));
+                byteArrays.add(entry.getValue().toString().getBytes(StandardCharsets.UTF_8));
+                byteArrays.add(LINE_FEED.getBytes(StandardCharsets.UTF_8));
+            }
+        }
+
+        byteArrays.add(("--" + boundary + "--" + LINE_FEED).getBytes(StandardCharsets.UTF_8));
+        return HttpRequest.BodyPublishers.ofByteArrays(byteArrays);
+    }
+
     public void run(String host, int port, String username, String password, String filename) {
         HttpClient httpClient = HttpClient.newHttpClient();
         String credentials = Base64.getEncoder().encodeToString((username + ":" + password).getBytes(StandardCharsets.UTF_8));
@@ -159,55 +186,29 @@ public class RemoteClient {
 
         Path encFilePath;
         String payloadB64;
-        byte[] fileBytes;
         try {
             // Send payload and file for processing and receive encrypted result
             payloadB64 = encryptKeyMaterials(enclavePub);
             encFilePath = Paths.get(encryptFile(filename));
-            fileBytes = Files.readAllBytes(encFilePath);
         } catch (Exception e) {
             throw new RuntimeException("Failed to encrypt payload: " + e.getMessage(), e);
         }
 
         HttpResponse<byte[]> response;
         try {
-            // Build multipart request
+
+            Map<Object, Object> data = new HashMap<>();
+            data.put("file", encFilePath);
+            data.put("clientData", payloadB64);
+            data.put("publicKey", enclavePubB64);
             String boundary = "----WebKitFormBoundary" + System.currentTimeMillis();
-            String LINE_FEED = "\r\n";
-            ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
-            PrintWriter writer = new PrintWriter(new OutputStreamWriter(byteArrayOutputStream, StandardCharsets.UTF_8), true);
-
-            // Add file part
-            writer.append("--").append(boundary).append(LINE_FEED);
-            writer.append("Content-Disposition: form-data; name=\"file\"; filename=\"")
-                    .append(String.valueOf(encFilePath.getFileName())).append("\"")
-                    .append(LINE_FEED);
-            writer.append("Content-Type: application/octet-stream").append(LINE_FEED);
-            writer.append(LINE_FEED).flush();
-            byteArrayOutputStream.write(fileBytes);
-            byteArrayOutputStream.flush();
-            writer.append(LINE_FEED).flush();
-
-            // Add clientData part
-            writer.append("--").append(boundary).append(LINE_FEED);
-            writer.append("Content-Disposition: form-data; name=\"clientData\"").append(LINE_FEED);
-            writer.append(LINE_FEED).append(payloadB64).append(LINE_FEED).flush();
-            writer.append("--").append(boundary).append("--").append(LINE_FEED).flush();
-
-            // Add publicKey part
-            writer.append("--").append(boundary).append(LINE_FEED);
-            writer.append("Content-Disposition: form-data; name=\"publicKey\"").append(LINE_FEED);
-            writer.append(LINE_FEED).append(enclavePubB64).append(LINE_FEED).flush();
-            writer.append("--").append(boundary).append("--").append(LINE_FEED).flush();
-
-            byte[] multipartBody = byteArrayOutputStream.toByteArray();
 
             response = httpClient.send(
                     java.net.http.HttpRequest.newBuilder()
                             .uri(new java.net.URI(baseUrl + "/process"))
                             .header("Authorization", "Basic " + credentials)
                             .header("Content-Type", "multipart/form-data; boundary=" + boundary)
-                            .POST(java.net.http.HttpRequest.BodyPublishers.ofByteArray(multipartBody))
+                            .POST(ofMultipartData(data, boundary))
                             .build(),
                     java.net.http.HttpResponse.BodyHandlers.ofByteArray()
             );
