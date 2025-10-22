@@ -12,7 +12,7 @@ public class Client {
     private SecretKey aesKey;
     private byte[] nonce;
 
-    private static final String SHARED_DIR = "occlum_verifier_002";
+    private static final String SHARED_DIR = "occlum_verifier_5001";
 
     /**
      * HKDF-SHA256 implementation
@@ -102,10 +102,13 @@ public class Client {
         return Base64.getEncoder().encodeToString(buf.array());
     }
 
-    public void run(String host, int port, String filename) throws Exception {
+    private PublicKey init(String host, int port) {
         try (Socket s = new Socket(host, port)) {
             DataInputStream in = new DataInputStream(s.getInputStream());
             DataOutputStream out = new DataOutputStream(s.getOutputStream());
+
+            out.writeUTF("init");
+            out.flush();
 
             // Step 1: read enclave public key
             String enclavePubB64 = in.readUTF();
@@ -113,6 +116,20 @@ public class Client {
             KeyFactory kf = KeyFactory.getInstance("EC");
             PublicKey enclavePub = kf.generatePublic(new X509EncodedKeySpec(enclavePubBytes));
             System.out.println("Received Enclave Public Key: " + enclavePubB64);
+            return enclavePub;
+        }
+        catch (Exception e) {
+            throw new RuntimeException("Failed to initialize connection: " + e.getMessage(), e);
+        }
+    }
+
+    private void process(String host, int port, String filename, PublicKey enclavePub) {
+        try (Socket s = new Socket(host, port)) {
+            DataInputStream in = new DataInputStream(s.getInputStream());
+            DataOutputStream out = new DataOutputStream(s.getOutputStream());
+
+            out.writeUTF("process");
+            out.flush();
 
             // Step 2: build and send payload (clientPub + nonce)
             String payloadB64 = encryptKeyMaterials(enclavePub);
@@ -134,6 +151,16 @@ public class Client {
             String decryptedFilename = decryptFile(encryptedResult);
             System.out.println("Decrypted response from enclave: " + decryptedFilename);
         }
+        catch (Exception e) {
+            throw new RuntimeException("Failed to process file: " + e.getMessage(), e);
+        }
+
+    }
+
+    public void run(String host, int port, String filename) {
+        PublicKey enclavePub = init(host, port);
+
+        process(host, port, filename, enclavePub);
     }
 
     private String decryptFile(String filename) {
@@ -177,7 +204,7 @@ public class Client {
         }
     }
 
-    public static void main(String[] args) throws Exception {
+    public static void main(String[] args) {
         if (args.length < 3) {
             System.err.println("Usage: java Client <host> <port> <filename>");
             System.exit(1);

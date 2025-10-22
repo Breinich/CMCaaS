@@ -49,7 +49,6 @@ build_verifier() {
 
 run_verifier() {
     enclave_id=$1
-    port_number=$2
     verifier_class=./verifier/VerifierRunner.class
 
     check_file_exist ${verifier_class}
@@ -58,16 +57,15 @@ run_verifier() {
 
     echo -e "${BLUE}occlum run JVM VerifierRunner (enclave id=${enclave_id})${NC}"
     occlum run /usr/lib/jvm/java-11-alibaba-dragonwell/jre/bin/java \
-        -Xmx512m -XX:-UseCompressedOops -XX:MaxMetaspaceSize=64m -Dos.name=Linux VerifierRunner "${port_number}"
+        -Xmx512m -XX:-UseCompressedOops -XX:MaxMetaspaceSize=64m -Dos.name=Linux VerifierRunner "${enclave_id}"
 }
 
 # --- main ---
 arg=$1
 enclave_id=$2
-port_number=$3
 
-if [ "$arg" != "verifier" ] || [ -z "$enclave_id" ] || [ -z "$port_number" ]; then
+if [ "$arg" != "verifier" ] || [ -z "$enclave_id" ]; then
     show_usage
 fi
 
-run_verifier "${enclave_id}" "${port_number}"
+run_verifier "${enclave_id}"

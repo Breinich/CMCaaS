@@ -22,6 +22,7 @@ public class VerifierRunner {
     private PublicKey publicKey;
     private byte[] nonce;
     private SecretKey aesKey;
+    private boolean stop = false;
 
     /**
      * Generate EC key pair (secp256r1)
@@ -213,16 +214,22 @@ public class VerifierRunner {
         try (ServerSocket server = new ServerSocket(port, 10, InetAddress.getByName("127.0.0.1"))) {
             System.out.println("Verifier enclave listening on 127.0.0.1:" + port);
 
-            Socket client = server.accept();
-            Thread t = new Thread(() -> {
-                try {
-                    handle(client);
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
-            });
-            t.start();
-            t.join();
+            while(!stop) {
+                Socket client = server.accept();
+                Thread t = new Thread(() -> {
+                    try {
+                        handle(client);
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+                    finally {
+                        try {
+                            client.close();
+                        } catch (IOException ignored) {}
+                    }
+                });
+                t.start();
+            }
         }
     }
 
@@ -230,34 +237,49 @@ public class VerifierRunner {
         DataInputStream in = new DataInputStream(s.getInputStream());
         DataOutputStream out = new DataOutputStream(s.getOutputStream());
 
-        // Step 1: send server public key first
-        String pubB64 = exportPublicKey();
-        out.writeUTF(pubB64);
-        out.flush();
-        System.out.println("PUBLIC_KEY_BASE64=" + pubB64);
+        String command = in.readUTF();
+        switch (command) {
+            case "init":
+                System.out.println("INIT_COMMAND_RECEIVED");
+                // Step 1: send server public key first
+                String pubB64 = exportPublicKey();
+                out.writeUTF(pubB64);
+                out.flush();
+                System.out.println("PUBLIC_KEY_BASE64=" + pubB64);
+                break;
+            case "process":
+                System.out.println("PROCESS_COMMAND_RECEIVED");
+                // Step 2: receive encrypted payload from the client, the client's public key and the nonce
+                String payloadB64 = in.readUTF();
+                System.out.println("ENCRYPTED_PAYLOAD=" + payloadB64);
+                if (payloadB64.trim().isEmpty()) {
+                    throw new IllegalArgumentException("No encrypted payload received");
+                }
+                decryptPayload(payloadB64);
 
-        // Step 2: receive encrypted payload from the client, the client's public key and the nonce
-        String payloadB64 = in.readUTF();
-        System.out.println("ENCRYPTED_PAYLOAD=" + payloadB64);
-        if (payloadB64.trim().isEmpty()) {
-            throw new IllegalArgumentException("No encrypted payload received");
+                // Now AES key and nonce are available
+                // Step 3: receive filename to process
+                String filename = in.readUTF();
+                System.out.println("FILENAME=" + filename);
+                if (filename.trim().isEmpty()) {
+                    throw new IllegalArgumentException("No filename received");
+                }
+                String encrypted_result_name = verifyModel(filename);
+
+                // Step 4: send back the encrypted output filename
+                out.writeUTF(encrypted_result_name);
+                out.flush();
+                System.out.println("ENCRYPTED_OUTPUT_FILENAME=" + encrypted_result_name);
+                stop = true;
+                break;
+            case "stop":
+                System.out.println("STOP_COMMAND_RECEIVED");
+                stop = true;
+                break;
+            default:
+                System.out.println("Unknown command: " + command);
+                break;
         }
-        decryptPayload(payloadB64);
-
-        // Now AES key and nonce are available
-        // Step 3: receive filename to process
-        String filename = in.readUTF();
-        System.out.println("FILENAME=" + filename);
-        if (filename.trim().isEmpty()) {
-            throw new IllegalArgumentException("No filename received");
-        }
-        String encrypted_result_name = verifyModel(filename);
-
-        // Step 4: send back the encrypted output filename
-        out.writeUTF(encrypted_result_name);
-        out.flush();
-        System.out.println("ENCRYPTED_OUTPUT_FILENAME=" + encrypted_result_name);
-
         s.close();
     }
 
