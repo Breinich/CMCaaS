@@ -120,7 +120,6 @@ public class RemoteClient {
                                     "username=" + URLEncoder.encode(username, StandardCharsets.UTF_8) +
                                             "&password=" + URLEncoder.encode(password, StandardCharsets.UTF_8)
                             ))
-                            .header("Authorization", "Basic " + credentials)
                             .build(),
                     HttpResponse.BodyHandlers.ofString()
             );

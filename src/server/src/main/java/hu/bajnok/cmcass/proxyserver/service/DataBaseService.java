@@ -64,7 +64,7 @@ public class DataBaseService {
         }
         User user = new User();
         user.setUsername(username);
-        user.setPassword(passwordEncoder.encode(password));
+        user.setPassword(password);
         user.setRole("USER");
         userRepository.save(user);
     }
