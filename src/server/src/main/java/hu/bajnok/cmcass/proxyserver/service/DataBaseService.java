@@ -38,7 +38,9 @@ public class DataBaseService {
     public int getProcessId(String username, String processKey) {
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new UsernameNotFoundException("User not found"));
-        return processRepository.findByKeyAndUserId(processKey, user.getId())
+        return user.getProcesses().stream()
+                .filter(p -> p.getKey().equals(processKey))
+                .findFirst()
                 .orElseThrow(() -> new IllegalArgumentException("Invalid process key"))
                 .getId();
     }
