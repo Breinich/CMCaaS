@@ -10,6 +10,7 @@ import java.net.Socket;
 import java.nio.file.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.locks.ReentrantLock;
 
 @Service
 public class EnclaveService {
@@ -25,6 +26,7 @@ public class EnclaveService {
     private final DataBaseService dbService;
     private final ExecutorService executor = Executors.newCachedThreadPool();
     private static final Logger logger = LoggerFactory.getLogger(EnclaveService.class);
+    private final ReentrantLock launchLock = new ReentrantLock();
 
     public EnclaveService(DataBaseService dbService) {
         this.dbService = dbService;
@@ -37,87 +39,93 @@ public class EnclaveService {
      * @throws IOException if fails to start the process or communicate with it
      */
     public String launch_enclave(String username) throws IOException {
-        String enclavePublicKey_b64 = "";
+        launchLock.lock();
+        try {
+            String enclavePublicKey_b64 = "";
+            final int new_id = dbService.getNewProcessId();
+            int port = BASE_PORT + new_id;
 
-        int new_id = dbService.getNewProcessId();
-        int port = BASE_PORT + new_id;
+            ProcessBuilder pb = new ProcessBuilder(ENCLAVE_CMD, ENCLAVE_TOOL, String.valueOf(port));
 
-        ProcessBuilder pb = new ProcessBuilder(ENCLAVE_CMD, ENCLAVE_TOOL, String.valueOf(port));
+            final Process process = pb.start();
 
-        Process process = pb.start();
-
-        executor.submit(() -> {
-            try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
-                String line;
-                while ((line = reader.readLine()) != null) {
-                    logger.info("[Enclave-{} STDOUT] {}", new_id, line);
+            executor.submit(() -> {
+                try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
+                    String line;
+                    while ((line = reader.readLine()) != null) {
+                        logger.info("[Enclave-{} STDOUT] {}", new_id, line);
+                    }
+                } catch (IOException e) {
+                    logger.error("Error reading enclave stdout", e);
                 }
-            } catch (IOException e) {
-                logger.error("Error reading enclave stdout", e);
-            }
-        });
+            });
 
-        executor.submit(() -> {
-            try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getErrorStream()))) {
-                String line;
-                while ((line = reader.readLine()) != null) {
-                    logger.error("[Enclave-{} STDERR] {}", new_id, line);
+            executor.submit(() -> {
+                try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getErrorStream()))) {
+                    String line;
+                    while ((line = reader.readLine()) != null) {
+                        logger.error("[Enclave-{} STDERR] {}", new_id, line);
+                    }
+                } catch (IOException e) {
+                    logger.error("Error reading enclave stderr", e);
                 }
-            } catch (IOException e) {
-                logger.error("Error reading enclave stderr", e);
+            });
+
+            int attempts = 0;
+            final int maxAttempts = 240; // max 120 seconds if sleep=500ms
+            boolean started = false;
+
+            while(attempts < maxAttempts){
+                try(Socket s = new Socket(HOST, port)) {
+                    DataInputStream in = new DataInputStream(s.getInputStream());
+                    DataOutputStream out = new DataOutputStream(s.getOutputStream());
+
+                    out.writeUTF("init");
+                    out.flush();
+
+                    enclavePublicKey_b64 = in.readUTF();
+                    logger.info("Enclave launched on port " + port + " with public key: " + enclavePublicKey_b64);
+                    started = true;
+                    break;
+                }
+                catch (IOException e){
+                    try {
+                        Thread.sleep(500);
+                        attempts++;
+                    } catch (InterruptedException ie) {
+                        ie.printStackTrace();
+                    }
+                }
             }
-        });
 
-        int attempts = 0;
-        final int maxAttempts = 240; // max 120 seconds if sleep=500ms
-        boolean started = false;
-
-        while(attempts < maxAttempts){
-            try(Socket s = new Socket(HOST, port)) {
-                DataInputStream in = new DataInputStream(s.getInputStream());
-                DataOutputStream out = new DataOutputStream(s.getOutputStream());
-
-                out.writeUTF("init");
-                out.flush();
-
-                enclavePublicKey_b64 = in.readUTF();
-                logger.info("Enclave launched on port " + port + " with public key: " + enclavePublicKey_b64);
-                started = true;
-                break;
+            if (!started) {
+                process.destroy();
+                throw new IOException("Failed to start enclave process within the expected time.");
             }
-            catch (IOException e){
+
+            // leave the process running and save its port number for later use
+
+            dbService.addProcess(username, new_id, enclavePublicKey_b64);
+            executor.submit(() -> {
                 try {
-                    Thread.sleep(500);
-                    attempts++;
-                } catch (InterruptedException ie) {
-                    ie.printStackTrace();
+                    int exitCode = process.waitFor();
+                    if (exitCode != 0) {
+                        logger.error("Enclave process exited with code {}", exitCode);
+                    } else {
+                        logger.info("Enclave process exited successfully");
+                    }
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    logger.error("Waiting for enclave process interrupted", e);
                 }
-            }
+            });
+
+            return enclavePublicKey_b64;
         }
-
-        if (!started) {
-            process.destroy();
-            throw new IOException("Failed to start enclave process within the expected time.");
+        finally {
+            // Always release the lock even if thrown earlier
+            launchLock.unlock();
         }
-
-        // leave the process running and save its port number for later use
-
-        dbService.addProcess(username, new_id, enclavePublicKey_b64);
-        executor.submit(() -> {
-            try {
-                int exitCode = process.waitFor();
-                if (exitCode != 0) {
-                    logger.error("Enclave process exited with code {}", exitCode);
-                } else {
-                    logger.info("Enclave process exited successfully");
-                }
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-                logger.error("Waiting for enclave process interrupted", e);
-            }
-        });
-
-        return enclavePublicKey_b64;
     }
 
     /**

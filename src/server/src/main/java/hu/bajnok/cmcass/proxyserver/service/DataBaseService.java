@@ -1,6 +1,5 @@
 package hu.bajnok.cmcass.proxyserver.service;
 
-import hu.bajnok.cmcass.proxyserver.controller.VerifierController;
 import hu.bajnok.cmcass.proxyserver.model.Process;
 import hu.bajnok.cmcass.proxyserver.model.User;
 import hu.bajnok.cmcass.proxyserver.repository.ProcessRepository;
@@ -31,7 +30,7 @@ public class DataBaseService {
         Process process = new Process();
         process.setId(processId);
         process.setKey(processKey);
-        user.addProcess(process);
+        process.setUser(user);
         processRepository.save(process);
         userRepository.save(user);
     }
@@ -47,7 +46,6 @@ public class DataBaseService {
     public void stopProcess(String username, String processKey) {
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new UsernameNotFoundException("User not found"));
-        processRepository.findByKeyAndUser(processKey, user).ifPresent(user::removeProcess);
         processRepository.deleteByKeyAndUser(processKey, user);
         userRepository.save(user);
     }

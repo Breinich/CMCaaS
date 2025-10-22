@@ -26,15 +26,4 @@ public class User {
 
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Process> processes;
-
-
-    public void addProcess(Process process) {
-        processes.add(process);
-        process.setUser(this);
-    }
-
-    public void removeProcess(Process process) {
-        processes.remove(process);
-        process.setUser(null);
-    }
 }
