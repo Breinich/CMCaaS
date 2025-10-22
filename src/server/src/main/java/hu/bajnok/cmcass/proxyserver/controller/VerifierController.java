@@ -11,6 +11,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/verifier")
@@ -102,12 +103,13 @@ public class VerifierController {
 
     /**
      * Register a new user
-     * @param username username
-     * @param password password
+     * @param payload Request body containing username and password
      * @return Response message
      */
     @PostMapping("/register")
-    public ResponseEntity<String> registerUser(@RequestParam("username") String username, @RequestParam("password") String password) {
+    public ResponseEntity<String> registerUser(@RequestBody Map<String, String> payload) {
+        String username = payload.get("username");
+        String password = payload.get("password");
         try {
             userDetailsService.registerUser(username, password);
             return ResponseEntity.ok("User registered successfully");
