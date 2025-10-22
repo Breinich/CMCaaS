@@ -1,5 +1,3 @@
-import tools.jackson.databind.ObjectMapper;
-
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
@@ -115,9 +113,7 @@ public class RemoteClient {
         final String baseUrl = "http://" + host + ":" + port + "/verifier";
 
         try {
-            ObjectMapper objectMapper = new ObjectMapper();
-            Map<String, String> payload = Map.of("username", username, "password", password);
-            String jsonPayload = objectMapper.writeValueAsString(payload);
+            String jsonPayload = String.format("{\"username\":\"%s\",\"password\":\"%s\"}", username, password);
 
             // Register if needed
            HttpRequest regRequest = HttpRequest.newBuilder(URI.create(baseUrl + "/register"))
