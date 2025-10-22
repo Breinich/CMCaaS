@@ -132,14 +132,21 @@ public class RemoteClient {
         PublicKey enclavePub;
         try {
             // Authenticate and get enclave public key
-            enclavePubB64 = httpClient.send(
-                    java.net.http.HttpRequest.newBuilder()
-                            .uri(new java.net.URI(baseUrl + "/init"))
-                            .header("Authorization", "Basic " + credentials)
-                            .GET()
-                            .build(),
-                    java.net.http.HttpResponse.BodyHandlers.ofString()
-            ).body();
+            java.net.http.HttpRequest initRequest = java.net.http.HttpRequest.newBuilder()
+                    .uri(new java.net.URI(baseUrl + "/init"))
+                    .header("Authorization", "Basic " + credentials)
+                    .GET()
+                    .build();
+
+            System.out.println("Sending request: " + initRequest.method() + " " + initRequest.uri());
+            initRequest.headers().map().forEach((k, v) -> System.out.println("Request header: " + k + " = " + String.join(",", v)));
+
+            java.net.http.HttpResponse<String> initResponse = httpClient.send(initRequest, java.net.http.HttpResponse.BodyHandlers.ofString());
+
+            System.out.println("Received response: status=" + initResponse.statusCode());
+            System.out.println("Response body: " + initResponse.body());
+
+            enclavePubB64 = initResponse.body();
             byte[] enclavePubBytes = Base64.getDecoder().decode(enclavePubB64);
             KeyFactory kf = KeyFactory.getInstance("EC");
             enclavePub = kf.generatePublic(new X509EncodedKeySpec(enclavePubBytes));
