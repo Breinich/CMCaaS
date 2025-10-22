@@ -50,7 +50,7 @@ public class EnclaveService {
             try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
                 String line;
                 while ((line = reader.readLine()) != null) {
-                    logger.info("[Enclave STDOUT] {}", line);
+                    logger.info("[Enclave-{} STDOUT] {}", new_id, line);
                 }
             } catch (IOException e) {
                 logger.error("Error reading enclave stdout", e);
@@ -61,7 +61,7 @@ public class EnclaveService {
             try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getErrorStream()))) {
                 String line;
                 while ((line = reader.readLine()) != null) {
-                    logger.error("[Enclave STDERR] {}", line);
+                    logger.error("[Enclave-{} STDERR] {}", new_id, line);
                 }
             } catch (IOException e) {
                 logger.error("Error reading enclave stderr", e);
