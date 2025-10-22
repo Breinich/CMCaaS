@@ -107,95 +107,119 @@ public class RemoteClient {
         return Base64.getEncoder().encodeToString(buf.array());
     }
 
-    public void run(String host, int port, String username, String password, String filename) throws Exception {
+    public void run(String host, int port, String username, String password, String filename) {
         HttpClient httpClient = HttpClient.newHttpClient();
         String credentials = Base64.getEncoder().encodeToString((username + ":" + password).getBytes(StandardCharsets.UTF_8));
 
         final String baseUrl = "http://" + host + ":" + port + "/verifier";
 
-        // Register if needed
-        httpClient.send(HttpRequest.newBuilder(URI.create(baseUrl + "/register"))
-                .POST(HttpRequest.BodyPublishers.ofString(
-                    "username=" + URLEncoder.encode(username, StandardCharsets.UTF_8) +
-                    "&password=" + URLEncoder.encode(password, StandardCharsets.UTF_8)
-                ))
-                .header("Authorization", "Basic " + credentials)
-                .build(),
-            HttpResponse.BodyHandlers.ofString()
-        );
-
-        // Authenticate and get enclave public key
-        PublicKey enclavePub;
-        String enclavePubB64 = httpClient.send(
-            java.net.http.HttpRequest.newBuilder()
-                .uri(new java.net.URI(baseUrl + "/init"))
-                .header("Authorization", "Basic " + credentials)
-                .GET()
-                .build(),
-            java.net.http.HttpResponse.BodyHandlers.ofString()
-        ).body();
-        byte[] enclavePubBytes = Base64.getDecoder().decode(enclavePubB64);
-        KeyFactory kf = KeyFactory.getInstance("EC");
-        enclavePub = kf.generatePublic(new X509EncodedKeySpec(enclavePubBytes));
-
-        // Send payload and file for processing and receive encrypted result
-        String payloadB64 = encryptKeyMaterials(enclavePub);
-        Path encFilePath = Paths.get(encryptFile(filename));
-
-        byte[] fileBytes = Files.readAllBytes(encFilePath);
-
-        // Build multipart request
-        String boundary = "----WebKitFormBoundary" + System.currentTimeMillis();
-        String LINE_FEED = "\r\n";
-        ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
-        PrintWriter writer = new PrintWriter(new OutputStreamWriter(byteArrayOutputStream, StandardCharsets.UTF_8), true);
-
-        // Add file part
-        writer.append("--").append(boundary).append(LINE_FEED);
-        writer.append("Content-Disposition: form-data; name=\"file\"; filename=\"")
-                .append(String.valueOf(encFilePath.getFileName())).append("\"")
-                .append(LINE_FEED);
-        writer.append("Content-Type: application/octet-stream").append(LINE_FEED);
-        writer.append(LINE_FEED).flush();
-        byteArrayOutputStream.write(fileBytes);
-        byteArrayOutputStream.flush();
-        writer.append(LINE_FEED).flush();
-
-        // Add clientData part
-        writer.append("--").append(boundary).append(LINE_FEED);
-        writer.append("Content-Disposition: form-data; name=\"clientData\"").append(LINE_FEED);
-        writer.append(LINE_FEED).append(payloadB64).append(LINE_FEED).flush();
-        writer.append("--").append(boundary).append("--").append(LINE_FEED).flush();
-
-        // Add publicKey part
-        writer.append("--").append(boundary).append(LINE_FEED);
-        writer.append("Content-Disposition: form-data; name=\"publicKey\"").append(LINE_FEED);
-        writer.append(LINE_FEED).append(enclavePubB64).append(LINE_FEED).flush();
-        writer.append("--").append(boundary).append("--").append(LINE_FEED).flush();
-
-        byte[] multipartBody = byteArrayOutputStream.toByteArray();
-
-        HttpResponse<byte[]> response = httpClient.send(
-            java.net.http.HttpRequest.newBuilder()
-                .uri(new java.net.URI(baseUrl + "/process"))
-                .header("Authorization", "Basic " + credentials)
-                .header("Content-Type", "multipart/form-data; boundary=" + boundary)
-                .POST(java.net.http.HttpRequest.BodyPublishers.ofByteArray(multipartBody))
-                .build(),
-            java.net.http.HttpResponse.BodyHandlers.ofByteArray()
-        );
-
-        if (response.statusCode() != 200) {
-            throw new RuntimeException("Failed to process file: " + new String(response.body(), StandardCharsets.UTF_8));
+        try {
+            // Register if needed
+            httpClient.send(HttpRequest.newBuilder(URI.create(baseUrl + "/register"))
+                            .POST(HttpRequest.BodyPublishers.ofString(
+                                    "username=" + URLEncoder.encode(username, StandardCharsets.UTF_8) +
+                                            "&password=" + URLEncoder.encode(password, StandardCharsets.UTF_8)
+                            ))
+                            .header("Authorization", "Basic " + credentials)
+                            .build(),
+                    HttpResponse.BodyHandlers.ofString()
+            );
+        } catch (Exception e) {
+            // Ignore registration errors (e.g. user already exists)
         }
 
-        // Save the encrypted response to a file
-        String encResponseFilename = "enc_response_" + new File(filename).getName();
-        Files.write(Paths.get(encResponseFilename), response.body());
+        String enclavePubB64;
+        PublicKey enclavePub;
+        try {
+            // Authenticate and get enclave public key
+            enclavePubB64 = httpClient.send(
+                    java.net.http.HttpRequest.newBuilder()
+                            .uri(new java.net.URI(baseUrl + "/init"))
+                            .header("Authorization", "Basic " + credentials)
+                            .GET()
+                            .build(),
+                    java.net.http.HttpResponse.BodyHandlers.ofString()
+            ).body();
+            byte[] enclavePubBytes = Base64.getDecoder().decode(enclavePubB64);
+            KeyFactory kf = KeyFactory.getInstance("EC");
+            enclavePub = kf.generatePublic(new X509EncodedKeySpec(enclavePubBytes));
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to initialize connection: " + e.getMessage(), e);
+        }
 
-        // Decrypt the response file
-        String decryptedFilename = decryptFile(encResponseFilename);
-        System.out.println("Decrypted result from enclave: " + decryptedFilename);
+        Path encFilePath;
+        String payloadB64;
+        byte[] fileBytes;
+        try {
+            // Send payload and file for processing and receive encrypted result
+            payloadB64 = encryptKeyMaterials(enclavePub);
+            encFilePath = Paths.get(encryptFile(filename));
+            fileBytes = Files.readAllBytes(encFilePath);
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to encrypt payload: " + e.getMessage(), e);
+        }
+
+        HttpResponse<byte[]> response;
+        try {
+            // Build multipart request
+            String boundary = "----WebKitFormBoundary" + System.currentTimeMillis();
+            String LINE_FEED = "\r\n";
+            ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
+            PrintWriter writer = new PrintWriter(new OutputStreamWriter(byteArrayOutputStream, StandardCharsets.UTF_8), true);
+
+            // Add file part
+            writer.append("--").append(boundary).append(LINE_FEED);
+            writer.append("Content-Disposition: form-data; name=\"file\"; filename=\"")
+                    .append(String.valueOf(encFilePath.getFileName())).append("\"")
+                    .append(LINE_FEED);
+            writer.append("Content-Type: application/octet-stream").append(LINE_FEED);
+            writer.append(LINE_FEED).flush();
+            byteArrayOutputStream.write(fileBytes);
+            byteArrayOutputStream.flush();
+            writer.append(LINE_FEED).flush();
+
+            // Add clientData part
+            writer.append("--").append(boundary).append(LINE_FEED);
+            writer.append("Content-Disposition: form-data; name=\"clientData\"").append(LINE_FEED);
+            writer.append(LINE_FEED).append(payloadB64).append(LINE_FEED).flush();
+            writer.append("--").append(boundary).append("--").append(LINE_FEED).flush();
+
+            // Add publicKey part
+            writer.append("--").append(boundary).append(LINE_FEED);
+            writer.append("Content-Disposition: form-data; name=\"publicKey\"").append(LINE_FEED);
+            writer.append(LINE_FEED).append(enclavePubB64).append(LINE_FEED).flush();
+            writer.append("--").append(boundary).append("--").append(LINE_FEED).flush();
+
+            byte[] multipartBody = byteArrayOutputStream.toByteArray();
+
+            response = httpClient.send(
+                    java.net.http.HttpRequest.newBuilder()
+                            .uri(new java.net.URI(baseUrl + "/process"))
+                            .header("Authorization", "Basic " + credentials)
+                            .header("Content-Type", "multipart/form-data; boundary=" + boundary)
+                            .POST(java.net.http.HttpRequest.BodyPublishers.ofByteArray(multipartBody))
+                            .build(),
+                    java.net.http.HttpResponse.BodyHandlers.ofByteArray()
+            );
+
+            if (response.statusCode() != 200) {
+                throw new RuntimeException("Failed to process file: " + new String(response.body(), StandardCharsets.UTF_8));
+            }
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to send processing request: " + e.getMessage(), e);
+        }
+
+        try {
+            // Save the encrypted response to a file
+            String encResponseFilename = "enc_response_" + new File(filename).getName();
+            Files.write(Paths.get(encResponseFilename), response.body());
+
+            // Decrypt the response file
+            String decryptedFilename = decryptFile(encResponseFilename);
+            System.out.println("Decrypted result from enclave: " + decryptedFilename);
+        } catch (Exception e) {
+            throw new RuntimeException("Error during run: " + e.getMessage(), e);
+        }
     }
 
     private String decryptFile(String filename) {
