@@ -6,4 +6,4 @@ targets:
   - target: /
     copy:
       - files:
-          - ../verifier/VerifierRunner.class
+          - /app/src/enclave/VerifierRunner.class
