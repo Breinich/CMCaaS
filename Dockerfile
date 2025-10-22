@@ -5,7 +5,7 @@ LABEL description="Docker image for running the CMCaaS server on an Intel SGX en
 LABEL version="1.0.0"
 
 # Install necessary packages
-RUN apt-get update && apt-get install -y openjdk-11-jdk maven jq supervisor  && \
+RUN apt-get update && apt-get install -y openjdk-21-jdk maven jq supervisor  && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
@@ -17,10 +17,10 @@ COPY scripts/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 
 COPY scripts /app/scripts/
 RUN chmod +x /app/scripts/*
-COPY pom.xml app/
+COPY src/server/pom.xml app/src/server/
 
 # Build the application
-RUN cd app && mvn clean package
+RUN cd app/src/server && mvn clean package
 
 # Initialize Occlum environment
 RUN occlum-javac src/enclave/VerifierRunner.java -d /app/src/enclave/
