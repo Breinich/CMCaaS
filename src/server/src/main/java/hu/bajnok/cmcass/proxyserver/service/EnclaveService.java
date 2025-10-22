@@ -56,6 +56,7 @@ public class EnclaveService {
 
                 enclavePublicKey_b64 = in.readUTF();
                 System.out.println("Enclave launched on port " + port + " with public key: " + enclavePublicKey_b64);
+                System.out.flush();
                 break;
             }
             catch (IOException e){
@@ -111,6 +112,7 @@ public class EnclaveService {
             String encryptedOutputFileName = getEnclaveProcessResult(clientDataB64, s);
 
             System.out.println("Received encrypted output filename: " + encryptedOutputFileName);
+            System.out.flush();
 
             return Paths.get(ENCLAVE_PREFIX + port, encryptedOutputFileName);
         }

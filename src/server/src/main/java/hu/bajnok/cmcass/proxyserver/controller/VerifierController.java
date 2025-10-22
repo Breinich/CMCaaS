@@ -40,6 +40,7 @@ public class VerifierController {
         }
 
         System.out.println("User [" + username + "] is initiating a verifier enclave.");
+        System.out.flush();
         String enclavePublicKey_b64 = enclaveService.launch_enclave(user.getUsername());
 
         return ResponseEntity.ok(enclavePublicKey_b64);
@@ -65,6 +66,7 @@ public class VerifierController {
         }
 
         System.out.println("User [" + username + "] is initiating a verification process.");
+        System.out.flush();
 
         try {
             Path encryptedOutputFilePath = enclaveService.process_task(username, file, clientDataB64, processKey);
@@ -95,6 +97,7 @@ public class VerifierController {
         }
 
         System.out.println("User [" + username + "] is stopping a verifier process.");
+        System.out.flush();
 
         enclaveService.stop_enclave(username, processKey);
 

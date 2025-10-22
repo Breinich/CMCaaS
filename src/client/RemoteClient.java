@@ -192,6 +192,7 @@ public class RemoteClient {
         // Decrypt the response file
         String decryptedFilename = decryptFile(encResponseFilename);
         System.out.println("Decrypted result from enclave: " + decryptedFilename);
+        System.out.flush();
     }
 
     private String decryptFile(String filename) {
@@ -241,6 +242,7 @@ public class RemoteClient {
 
         if (cnsl == null) {
             System.out.println("No console available");
+            System.out.flush();
             return;
         }
 

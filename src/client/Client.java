@@ -116,6 +116,7 @@ public class Client {
             KeyFactory kf = KeyFactory.getInstance("EC");
             PublicKey enclavePub = kf.generatePublic(new X509EncodedKeySpec(enclavePubBytes));
             System.out.println("Received Enclave Public Key: " + enclavePubB64);
+            System.out.flush();
             return enclavePub;
         }
         catch (Exception e) {
@@ -136,20 +137,24 @@ public class Client {
             out.writeUTF(payloadB64);
             out.flush();
             System.out.println("Sent encrypted payload: " + payloadB64);
+            System.out.flush();
 
             // Step 3: encrypt the file and send to enclave
             String encryptedFilename = encryptFile(filename);
             out.writeUTF(encryptedFilename);
             out.flush();
             System.out.println("Sent filename: " + encryptedFilename);
+            System.out.flush();
 
             // Step 4: receive encrypted output filename
             String encryptedResult = in.readUTF();
             System.out.println("Encrypted output filename received: " + encryptedResult);
+            System.out.flush();
 
             // Step 5: optionally decrypt response
             String decryptedFilename = decryptFile(encryptedResult);
             System.out.println("Decrypted response from enclave: " + decryptedFilename);
+            System.out.flush();
         }
         catch (Exception e) {
             throw new RuntimeException("Failed to process file: " + e.getMessage(), e);
