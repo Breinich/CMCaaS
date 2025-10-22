@@ -141,11 +141,11 @@ public class EnclaveService {
         // 1. Get the process related to the user
         int processId;
         try {
-            logger.debug("Retrieving process ID for user: {} with process key: {}", username, processKey);
+            logger.info("Retrieving process ID for user: {} with process key: {}", username, processKey);
             processId = dbService.getProcessId(username, processKey);
         }
-        catch (IllegalArgumentException e) {
-            throw new IllegalStateException("Enclave process is not running");
+        catch (Exception e) {
+            throw new IllegalStateException("Enclave process is not running: " + e.getMessage());
         }
 
         int port = BASE_PORT + processId;
