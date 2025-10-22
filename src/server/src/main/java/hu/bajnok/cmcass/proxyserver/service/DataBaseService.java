@@ -1,8 +1,11 @@
 package hu.bajnok.cmcass.proxyserver.service;
 
+import hu.bajnok.cmcass.proxyserver.controller.VerifierController;
 import hu.bajnok.cmcass.proxyserver.model.Process;
 import hu.bajnok.cmcass.proxyserver.model.User;
 import hu.bajnok.cmcass.proxyserver.repository.ProcessRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.security.core.userdetails.*;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -14,6 +17,7 @@ public class DataBaseService {
     private final UserRepository userRepository;
     private final ProcessRepository processRepository;
     private final PasswordEncoder passwordEncoder;
+    private static final Logger logger = LoggerFactory.getLogger(DataBaseService.class);
 
     public DataBaseService(UserRepository userRepository, ProcessRepository processRepository, PasswordEncoder passwordEncoder) {
         this.userRepository = userRepository;

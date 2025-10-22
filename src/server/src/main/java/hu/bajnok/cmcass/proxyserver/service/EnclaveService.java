@@ -1,5 +1,8 @@
 package hu.bajnok.cmcass.proxyserver.service;
 
+import hu.bajnok.cmcass.proxyserver.controller.VerifierController;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -22,6 +25,7 @@ public class EnclaveService {
 
     private final DataBaseService dbService;
     private final ExecutorService executor = Executors.newCachedThreadPool();
+    private static final Logger logger = LoggerFactory.getLogger(EnclaveService.class);
 
     public EnclaveService(DataBaseService dbService) {
         this.dbService = dbService;
@@ -41,10 +45,31 @@ public class EnclaveService {
 
         ProcessBuilder pb = new ProcessBuilder(ENCLAVE_CMD, ENCLAVE_TOOL, String.valueOf(port));
 
-        pb.redirectOutput(ProcessBuilder.Redirect.INHERIT);
-        pb.redirectError(ProcessBuilder.Redirect.INHERIT);
-
         Process process = pb.start();
+
+        // Capture stdout
+        new Thread(() -> {
+            try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    logger.info("[Enclave STDOUT] {}", line);
+                }
+            } catch (Exception e) {
+                logger.error("Error reading process stdout", e);
+            }
+        }).start();
+
+        // Capture stderr
+        new Thread(() -> {
+            try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getErrorStream()))) {
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    logger.error("[Enclave STDERR] {}", line);
+                }
+            } catch (Exception e) {
+                logger.error("Error reading process stderr", e);
+            }
+        }).start();
 
         while(true){
             try(Socket s = new Socket(HOST, port)) {
@@ -55,8 +80,7 @@ public class EnclaveService {
                 out.flush();
 
                 enclavePublicKey_b64 = in.readUTF();
-                System.out.println("Enclave launched on port " + port + " with public key: " + enclavePublicKey_b64);
-                System.out.flush();
+                logger.info("Enclave launched on port " + port + " with public key: " + enclavePublicKey_b64);
                 break;
             }
             catch (IOException e){
@@ -111,8 +135,7 @@ public class EnclaveService {
         try (Socket s = new Socket(HOST, port)) {
             String encryptedOutputFileName = getEnclaveProcessResult(clientDataB64, s);
 
-            System.out.println("Received encrypted output filename: " + encryptedOutputFileName);
-            System.out.flush();
+            logger.info("Received encrypted output filename: " + encryptedOutputFileName);
 
             return Paths.get(ENCLAVE_PREFIX + port, encryptedOutputFileName);
         }

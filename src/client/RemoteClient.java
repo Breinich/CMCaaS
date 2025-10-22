@@ -1,4 +1,5 @@
 import java.net.URI;
+import java.net.URLEncoder;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
@@ -114,9 +115,12 @@ public class RemoteClient {
 
         // Register if needed
         httpClient.send(HttpRequest.newBuilder(URI.create(baseUrl + "/register"))
-            .POST(HttpRequest.BodyPublishers.ofString("username=" + username + "&password=" + password))
-            .header("Content-Type", "application/x-www-form-urlencoded")
-            .build(),
+                .POST(HttpRequest.BodyPublishers.ofString(
+                    "username=" + URLEncoder.encode(username, StandardCharsets.UTF_8) +
+                    "&password=" + URLEncoder.encode(password, StandardCharsets.UTF_8)
+                ))
+                .header("Authorization", "Basic " + credentials)
+                .build(),
             HttpResponse.BodyHandlers.ofString()
         );
 
@@ -192,7 +196,6 @@ public class RemoteClient {
         // Decrypt the response file
         String decryptedFilename = decryptFile(encResponseFilename);
         System.out.println("Decrypted result from enclave: " + decryptedFilename);
-        System.out.flush();
     }
 
     private String decryptFile(String filename) {
@@ -242,7 +245,6 @@ public class RemoteClient {
 
         if (cnsl == null) {
             System.out.println("No console available");
-            System.out.flush();
             return;
         }
 

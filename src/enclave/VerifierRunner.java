@@ -156,7 +156,6 @@ public class VerifierRunner {
         java.nio.file.Files.write(filePath, decFile);
 
         System.out.println("Decrypted file: " + filename);
-        System.out.flush();
     }
 
     /**
@@ -189,7 +188,6 @@ public class VerifierRunner {
         java.nio.file.Files.write(java.nio.file.Paths.get(SHARED_DIR, encryptedFilename), encFile);
 
         System.out.println("Encrypted output file: " + encryptedFilename);
-        System.out.flush();
         return encryptedFilename;
     }
 
@@ -215,7 +213,6 @@ public class VerifierRunner {
 
         try (ServerSocket server = new ServerSocket(port, 10, InetAddress.getByName("127.0.0.1"))) {
             System.out.println("Verifier enclave listening on 127.0.0.1:" + port);
-            System.out.flush();
 
             while(!stop) {
                 Socket client = server.accept();
@@ -244,21 +241,19 @@ public class VerifierRunner {
         switch (command) {
             case "init":
                 System.out.println("INIT_COMMAND_RECEIVED");
-                System.out.flush();
+
                 // Step 1: send server public key first
                 String pubB64 = exportPublicKey();
                 out.writeUTF(pubB64);
                 out.flush();
                 System.out.println("PUBLIC_KEY_BASE64=" + pubB64);
-                System.out.flush();
                 break;
             case "process":
                 System.out.println("PROCESS_COMMAND_RECEIVED");
-                System.out.flush();
+
                 // Step 2: receive encrypted payload from the client, the client's public key and the nonce
                 String payloadB64 = in.readUTF();
                 System.out.println("ENCRYPTED_PAYLOAD=" + payloadB64);
-                System.out.flush();
                 if (payloadB64.trim().isEmpty()) {
                     throw new IllegalArgumentException("No encrypted payload received");
                 }
@@ -268,7 +263,6 @@ public class VerifierRunner {
                 // Step 3: receive filename to process
                 String filename = in.readUTF();
                 System.out.println("FILENAME=" + filename);
-                System.out.flush();
                 if (filename.trim().isEmpty()) {
                     throw new IllegalArgumentException("No filename received");
                 }
@@ -278,17 +272,14 @@ public class VerifierRunner {
                 out.writeUTF(encrypted_result_name);
                 out.flush();
                 System.out.println("ENCRYPTED_OUTPUT_FILENAME=" + encrypted_result_name);
-                System.out.flush();
                 stop = true;
                 break;
             case "stop":
                 System.out.println("STOP_COMMAND_RECEIVED");
-                System.out.flush();
                 stop = true;
                 break;
             default:
                 System.out.println("Unknown command: " + command);
-                System.out.flush();
                 break;
         }
         s.close();

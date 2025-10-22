@@ -2,6 +2,8 @@ package hu.bajnok.cmcass.proxyserver.controller;
 
 import hu.bajnok.cmcass.proxyserver.service.DataBaseService;
 import hu.bajnok.cmcass.proxyserver.service.EnclaveService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -19,6 +21,7 @@ public class VerifierController {
 
     private final EnclaveService enclaveService;
     private final DataBaseService userDetailsService;
+    private static final Logger logger = LoggerFactory.getLogger(VerifierController.class);
 
     public VerifierController(EnclaveService enclaveService, DataBaseService userDetailsService) {
         this.enclaveService = enclaveService;
@@ -39,8 +42,7 @@ public class VerifierController {
             return ResponseEntity.badRequest().body("No user authenticated");
         }
 
-        System.out.println("User [" + username + "] is initiating a verifier enclave.");
-        System.out.flush();
+        logger.info("User [" + username + "] is initiating a verifier enclave.");
         String enclavePublicKey_b64 = enclaveService.launch_enclave(user.getUsername());
 
         return ResponseEntity.ok(enclavePublicKey_b64);
@@ -65,8 +67,7 @@ public class VerifierController {
             return ResponseEntity.badRequest().body("No user authenticated".getBytes());
         }
 
-        System.out.println("User [" + username + "] is initiating a verification process.");
-        System.out.flush();
+        logger.info("User [" + username + "] is initiating a verification process.");
 
         try {
             Path encryptedOutputFilePath = enclaveService.process_task(username, file, clientDataB64, processKey);
@@ -96,8 +97,7 @@ public class VerifierController {
             return ResponseEntity.badRequest().body("No user authenticated");
         }
 
-        System.out.println("User [" + username + "] is stopping a verifier process.");
-        System.out.flush();
+        logger.info("User [" + username + "] is stopping a verifier process.");
 
         enclaveService.stop_enclave(username, processKey);
 
