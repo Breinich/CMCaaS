@@ -115,14 +115,17 @@ public class RemoteClient {
 
         try {
             // Register if needed
-            httpClient.send(HttpRequest.newBuilder(URI.create(baseUrl + "/register"))
-                            .POST(HttpRequest.BodyPublishers.ofString(
-                                    "username=" + URLEncoder.encode(username, StandardCharsets.UTF_8) +
-                                            "&password=" + URLEncoder.encode(password, StandardCharsets.UTF_8)
-                            ))
-                            .build(),
-                    HttpResponse.BodyHandlers.ofString()
-            );
+           HttpRequest regRequest = HttpRequest.newBuilder(URI.create(baseUrl + "/register"))
+                   .POST(HttpRequest.BodyPublishers.ofString(
+                           "username=" + URLEncoder.encode(username, StandardCharsets.UTF_8) +
+                                   "&password=" + URLEncoder.encode(password, StandardCharsets.UTF_8)
+                   ))
+                   .build();
+           System.out.println("Sending request: " + regRequest.method() + " " + regRequest.uri());
+           regRequest.headers().map().forEach((k, v) -> System.out.println("Request header: " + k + " = " + String.join(",", v)));
+           HttpResponse<String> regResponse = httpClient.send(regRequest, HttpResponse.BodyHandlers.ofString());
+           System.out.println("Received response: status=" + regResponse.statusCode());
+           System.out.println("Response body: " + regResponse.body());
         } catch (Exception e) {
             // Ignore registration errors (e.g. user already exists)
         }
