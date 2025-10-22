@@ -1,7 +1,7 @@
-package hu.bajnok.java;
+package hu.bajnok;
 
-import hu.bajnok.java.model.User;
-import hu.bajnok.java.repository.UserRepository;
+import hu.bajnok.model.User;
+import hu.bajnok.repository.UserRepository;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
@@ -18,7 +18,7 @@ public class UserInitializer implements CommandLineRunner {
     }
 
     @Override
-    public void run(String... args) throws Exception {
+    public void run(String... args) {
         if(userRepository.findByUsername("client1").isEmpty()) {
             User user = new User();
             user.setUsername("client1");

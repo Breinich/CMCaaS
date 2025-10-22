@@ -1,4 +1,4 @@
-package hu.bajnok.java.model;
+package hu.bajnok.model;
 
 import jakarta.persistence.*;
 import lombok.Getter;

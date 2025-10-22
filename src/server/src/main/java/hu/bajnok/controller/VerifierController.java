@@ -1,7 +1,7 @@
-package hu.bajnok.java.controller;
+package hu.bajnok.controller;
 
-import hu.bajnok.java.service.DataBaseService;
-import hu.bajnok.java.service.EnclaveService;
+import hu.bajnok.service.DataBaseService;
+import hu.bajnok.service.EnclaveService;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -51,14 +51,13 @@ public class VerifierController {
      * @param processKey Public key of the enclave process
      * @param user Authenticated user details
      * @return Encrypted output file
-     * @throws Exception
      */
     @PostMapping(value = "/process", consumes = MediaType.MULTIPART_FORM_DATA_VALUE, produces = MediaType.APPLICATION_OCTET_STREAM_VALUE)
     public ResponseEntity<byte[]> processEncryptedFile(
             @RequestParam("file") MultipartFile file,
             @RequestParam("clientData") String clientDataB64,
             @RequestParam("publicKey") String processKey,
-            @AuthenticationPrincipal UserDetails user) throws Exception {
+            @AuthenticationPrincipal UserDetails user) {
         String username = (user != null) ? user.getUsername() : null;
         if (username == null) {
             return ResponseEntity.badRequest().body("No user authenticated".getBytes());
@@ -66,14 +65,19 @@ public class VerifierController {
 
         System.out.println("User [" + username + "] is initiating a verification process.");
 
-        Path encryptedOutputFilePath = enclaveService.process_task(username, file, clientDataB64, processKey);
+        try {
+            Path encryptedOutputFilePath = enclaveService.process_task(username, file, clientDataB64, processKey);
 
-        byte[] encryptedFile = Files.readAllBytes(encryptedOutputFilePath);
+            byte[] encryptedFile = Files.readAllBytes(encryptedOutputFilePath);
+            return ResponseEntity.ok()
+                    .header("Content-Disposition", "attachment; filename=\""
+                            + encryptedOutputFilePath.getFileName() + "\"")
+                    .body(encryptedFile);
+        }
+        catch (Exception e) {
+            return ResponseEntity.status(500).body(("Error processing file: " + e.getMessage()).getBytes());
+        }
 
-        return ResponseEntity.ok()
-                .header("Content-Disposition", "attachment; filename=\""
-                        + encryptedOutputFilePath.getFileName() + "\"")
-                .body(encryptedFile);
     }
 
     /**
@@ -81,10 +85,9 @@ public class VerifierController {
      * @param processKey Public key of the enclave process
      * @param user Authenticated user details
      * @return Response message
-     * @throws Exception
      */
     @PostMapping("/kill")
-    public ResponseEntity<String> killProcess(@RequestParam("publicKey") String processKey, @AuthenticationPrincipal UserDetails user) throws Exception {
+    public ResponseEntity<String> killProcess(@RequestParam("publicKey") String processKey, @AuthenticationPrincipal UserDetails user) {
         String username = (user != null) ? user.getUsername() : null;
         if (username == null) {
             return ResponseEntity.badRequest().body("No user authenticated");

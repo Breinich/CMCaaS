@@ -1,4 +1,4 @@
-package hu.bajnok.java;
+package hu.bajnok;
 
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 

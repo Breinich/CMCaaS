@@ -1,4 +1,4 @@
-package hu.bajnok.java.config;
+package hu.bajnok.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;

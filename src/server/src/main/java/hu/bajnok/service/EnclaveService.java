@@ -1,4 +1,4 @@
-package hu.bajnok.java.service;
+package hu.bajnok.service;
 
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;

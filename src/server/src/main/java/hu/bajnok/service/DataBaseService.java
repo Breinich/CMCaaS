@@ -1,13 +1,13 @@
-package hu.bajnok.java.service;
+package hu.bajnok.service;
 
-import hu.bajnok.java.model.Process;
-import hu.bajnok.java.model.User;
-import hu.bajnok.java.repository.ProcessRepository;
+import hu.bajnok.model.Process;
+import hu.bajnok.model.User;
+import hu.bajnok.repository.ProcessRepository;
 import org.springframework.security.core.userdetails.*;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
-import hu.bajnok.java.repository.UserRepository;
+import hu.bajnok.repository.UserRepository;
 
 import java.util.Collections;
 

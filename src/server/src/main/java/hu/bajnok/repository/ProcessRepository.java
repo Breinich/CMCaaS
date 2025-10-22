@@ -1,7 +1,7 @@
-package hu.bajnok.java.repository;
+package hu.bajnok.repository;
 
-import hu.bajnok.java.model.Process;
-import hu.bajnok.java.model.User;
+import hu.bajnok.model.Process;
+import hu.bajnok.model.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;
