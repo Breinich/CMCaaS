@@ -28,11 +28,11 @@ init_instance() {
     occlum init
 
     # Tune Occlum.json for JVM
-    new_json="$(jq '.resource_limits.user_space_size = "1MB" |
-                    .resource_limits.user_space_max_size = "6000MB" |
+    new_json="$(jq '.resource_limits.user_space_size = "1000MB" |
+                    .resource_limits.user_space_max_size = "2000MB" |
                     .resource_limits.kernel_space_heap_size = "1MB" |
                     .resource_limits.kernel_space_heap_max_size = "64MB" |
-                    .resource_limits.max_num_of_threads = 64 |
+                    .resource_limits.max_num_of_threads = 12 |
                     .process.default_heap_size = "512MB" |
                     .entry_points = ["/usr/lib/jvm/java-11-alibaba-dragonwell/jre/bin"] |
                     .env.default = ["LD_LIBRARY_PATH=/usr/lib/jvm/java-11-alibaba-dragonwell/jre/lib/server:/usr/lib/jvm/java-11-alibaba-dragonwell/jre/lib:/usr/lib/jvm/java-11-alibaba-dragonwell/jre/../lib"]' Occlum.json)"
