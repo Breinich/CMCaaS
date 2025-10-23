@@ -1,6 +1,7 @@
 package hu.bajnok.cmcass.proxyserver.repository;
 
 import hu.bajnok.cmcass.proxyserver.model.Process;
+import hu.bajnok.cmcass.proxyserver.model.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 
@@ -12,4 +13,6 @@ public interface ProcessRepository extends JpaRepository<Process, Integer> {
 
     @Query("SELECT p.id FROM Process p")
     List<Integer> findAllProcessIds();
+
+    List<Process> findAllByUser(User user);
 }

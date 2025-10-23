@@ -10,6 +10,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import hu.bajnok.cmcass.proxyserver.repository.UserRepository;
 
+import java.util.List;
+
 @Service
 public class DataBaseService {
 
@@ -38,7 +40,9 @@ public class DataBaseService {
     public int getProcessId(String username, String processKey) {
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new UsernameNotFoundException("User not found"));
-        return user.getProcesses().stream()
+        List<Process> processes = processRepository.findAllByUser(user);
+        logger.info("User {} has processes: {}", username, processes.size());
+        return processes.stream() // Changed from user.getProcesses() to processes
                 .filter(p -> p.getKey().equals(processKey))
                 .findFirst()
                 .orElseThrow(() -> new IllegalArgumentException("Invalid process key"))
