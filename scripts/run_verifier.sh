@@ -34,8 +34,8 @@ init_instance() {
                     .resource_limits.kernel_space_heap_max_size = "64MB" |
                     .resource_limits.max_num_of_threads = 64 |
                     .process.default_heap_size = "512MB" |
-                    .entry_points = ["/usr/lib/jvm/java-21-openjdk-amd64/jre/bin"] |
-                    .env.default = ["LD_LIBRARY_PATH=/usr/lib/jvm/java-21-openjdk-amd64/jre/lib/server:/usr/lib/jvm/java-21-openjdk-amd64/jre/lib:/usr/lib/jvm/java-21-openjdk-amd64/jre/../lib:/lib/x86_64-linux-gnu:/opt/occlum/glibc/lib"]' Occlum.json)"
+                    .entry_points = ["/usr/lib/jvm/java-21-openjdk-amd64/bin/java"] |
+                    .env.default = ["LD_LIBRARY_PATH=/usr/lib/jvm/java-21-openjdk-amd64/lib/server:/usr/lib/jvm/java-21-openjdk-amd64/lib:/lib/x86_64-linux-gnu:/opt/occlum/glibc/lib"]' Occlum.json)"
     echo "${new_json}" > Occlum.json
 }
 
