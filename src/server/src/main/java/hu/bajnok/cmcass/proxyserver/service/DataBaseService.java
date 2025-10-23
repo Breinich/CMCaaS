@@ -32,7 +32,6 @@ public class DataBaseService {
         Process process = new Process();
         process.setId(processId);
         process.setKey(processKey);
-        process.setUser(user);
         user.addProcess(process);
         processRepository.save(process);
     }

@@ -29,5 +29,6 @@ public class User {
 
     public void addProcess(Process process) {
         this.processes.add(process);
+        process.setUser(this);
     }
 }
