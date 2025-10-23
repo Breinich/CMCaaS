@@ -33,22 +33,18 @@ public class DataBaseService {
         process.setId(processId);
         process.setKey(processKey);
         process.setUser(user);
+        user.addProcess(process);
         processRepository.save(process);
-        userRepository.save(user);
     }
 
     public int getProcessId(String username, String processKey) {
-        logger.info("getProcessId username=<{}> processKey=<{}>", username, processKey);
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new UsernameNotFoundException("User not found"));
 
-        List<Process> processes = processRepository.findAllByUser(user);
-        logger.info("User {} has processes: {}", username, processes.size());
-        return processes.stream() // Changed from user.getProcesses() to processes
-                .filter(p -> p.getKey().equals(processKey))
-                .findFirst()
-                .orElseThrow(() -> new IllegalArgumentException("Invalid process key"))
-                .getId();
+        Process process = processRepository.findByKeyAndUser_Id(processKey, user.getId())
+                .orElseThrow(() -> new IllegalArgumentException("Invalid process key"));
+
+        return process.getId();
     }
 
     public void stopProcess(String username, String processKey) {

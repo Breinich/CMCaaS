@@ -26,4 +26,8 @@ public class User {
 
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Process> processes;
+
+    public void addProcess(Process process) {
+        this.processes.add(process);
+    }
 }
