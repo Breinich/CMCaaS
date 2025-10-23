@@ -28,12 +28,12 @@ init_instance() {
     occlum init
 
     # Tune Occlum.json for JVM
-    new_json="$(jq '.resource_limits.user_space_size = "1000MB" |
-                    .resource_limits.user_space_max_size = "2000MB" |
-                    .resource_limits.kernel_space_heap_size = "1MB" |
+    new_json="$(jq '.resource_limits.user_space_size = "1500MB" |
+                    .resource_limits.user_space_max_size = "2500MB" |
+                    .resource_limits.kernel_space_heap_size = "2MB" |
                     .resource_limits.kernel_space_heap_max_size = "64MB" |
                     .resource_limits.max_num_of_threads = 64 |
-                    .process.default_heap_size = "512MB" |
+                    .process.default_heap_size = "768MB" |
                     .entry_points = ["/usr/lib/jvm/java-21-openjdk-amd64/bin/java"] |
                     .env.default = ["LD_LIBRARY_PATH=/usr/lib/jvm/java-21-openjdk-amd64/lib/server:/usr/lib/jvm/java-21-openjdk-amd64/lib:/lib/x86_64-linux-gnu:/opt/occlum/glibc/lib"]' Occlum.json)"
     echo "${new_json}" > Occlum.json
