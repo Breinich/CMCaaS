@@ -1,9 +1,12 @@
 includes:
   - base.yaml
-  - java-11-alibaba-dragonwell.yaml
 targets:
   # copy VerifierRunner class file
   - target: /
     copy:
       - files:
           - /app/src/enclave/VerifierRunner.class
+  - target: /usr/lib/jvm
+    copy:
+      - dirs:
+          - /usr/lib/jvm/java-21-openjdk-amd64
