@@ -42,7 +42,7 @@ public class EnclaveService {
         launchLock.lock();
         try {
             String enclavePublicKey_b64 = "";
-            final int new_id = dbService.getNewProcessId();
+            final int new_id = dbService.getNewProcessPort();
             int port = BASE_PORT + new_id;
 
             ProcessBuilder pb = new ProcessBuilder(ENCLAVE_CMD, ENCLAVE_TOOL, String.valueOf(port));
@@ -142,7 +142,7 @@ public class EnclaveService {
         int processId;
         try {
             logger.info("Retrieving process ID for user: {} with process key: {}", username, processKey);
-            processId = dbService.getProcessId(username, processKey);
+            processId = dbService.getProcessPort(username, processKey);
         }
         catch (Exception e) {
             throw new IllegalStateException("Enclave process is not running: " + e.getMessage());
@@ -200,7 +200,7 @@ public class EnclaveService {
     public void stop_enclave(String username, String processKey) {
         int processId;
         try {
-            processId = dbService.getProcessId(username, processKey);
+            processId = dbService.getProcessPort(username, processKey);
         }
         catch (IllegalArgumentException e) {
             throw new IllegalStateException("Enclave process is not running");

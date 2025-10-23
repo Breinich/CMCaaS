@@ -10,9 +10,13 @@ import lombok.Setter;
 @Table(name = "processes")
 public class Process {
     @Id
-    private int id;
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
 
-    @Column(nullable = false)
+    @Column(nullable = false, unique = true)
+    private int port;
+
+    @Column(nullable = false, unique = true)
     private String key;
 
     @JoinTable

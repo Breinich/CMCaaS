@@ -6,12 +6,13 @@ import org.springframework.data.jpa.repository.Query;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.zip.ZipFile;
 
 public interface ProcessRepository extends JpaRepository<Process, Integer> {
     void deleteByKeyAndUser_Id(String key, Long userId);
 
-    @Query("SELECT p.id FROM Process p")
-    List<Integer> findAllProcessIds();
-
     Optional<Process> findByKeyAndUser_Id(String key, Long userId);
+
+    @Query("SELECT p.port FROM Process p")
+    List<Integer> findAllProcessPorts();
 }

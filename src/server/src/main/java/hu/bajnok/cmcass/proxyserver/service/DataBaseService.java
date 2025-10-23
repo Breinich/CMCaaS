@@ -11,8 +11,6 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import hu.bajnok.cmcass.proxyserver.repository.UserRepository;
 
-import java.util.List;
-
 @Service
 public class DataBaseService {
 
@@ -28,24 +26,24 @@ public class DataBaseService {
     }
 
     @Transactional
-    public void addProcess(String username, int processId, String processKey) {
+    public void addProcess(String username, int port, String processKey) {
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new UsernameNotFoundException("User not found"));
         Process process = new Process();
-        process.setId(processId);
+        process.setPort(port);
         process.setKey(processKey);
         user.addProcess(process);
         processRepository.save(process);
     }
 
-    public int getProcessId(String username, String processKey) {
+    public int getProcessPort(String username, String processKey) {
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new UsernameNotFoundException("User not found"));
 
         Process process = processRepository.findByKeyAndUser_Id(processKey, user.getId())
                 .orElseThrow(() -> new IllegalArgumentException("Invalid process key"));
 
-        return process.getId();
+        return process.getPort();
     }
 
     @Transactional
@@ -56,8 +54,8 @@ public class DataBaseService {
         userRepository.save(user);
     }
 
-    public int getNewProcessId() {
-        return processRepository.findAllProcessIds().stream()
+    public int getNewProcessPort() {
+        return processRepository.findAllProcessPorts().stream()
                 .max(Integer::compareTo)
                 .orElse(0) + 1;
     }
