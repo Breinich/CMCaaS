@@ -38,8 +38,10 @@ public class DataBaseService {
     }
 
     public int getProcessId(String username, String processKey) {
+        logger.info("getProcessId username=<{}> processKey=<{}>", username, processKey);
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+
         List<Process> processes = processRepository.findAllByUser(user);
         logger.info("User {} has processes: {}", username, processes.size());
         return processes.stream() // Changed from user.getProcesses() to processes
