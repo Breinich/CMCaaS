@@ -19,7 +19,6 @@ public class Process {
     @Column(nullable = false, unique = true)
     private String key;
 
-    @JoinTable
     @ManyToOne
     @JoinColumn(name = "user_id", referencedColumnName = "id", nullable = false)
     private User user;
