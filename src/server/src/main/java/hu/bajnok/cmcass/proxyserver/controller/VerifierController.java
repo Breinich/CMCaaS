@@ -42,8 +42,8 @@ public class VerifierController {
             return ResponseEntity.badRequest().body("No user authenticated");
         }
 
-        logger.info("User [" + username + "] is initiating a verifier enclave.");
-        String enclavePublicKey_b64 = enclaveService.launch_enclave(user.getUsername());
+        logger.info("User [{}] is initiating a verifier enclave.", username);
+        String enclavePublicKey_b64 = enclaveService.launch_enclave(username);
 
         return ResponseEntity.ok(enclavePublicKey_b64);
     }
@@ -67,7 +67,7 @@ public class VerifierController {
             return ResponseEntity.badRequest().body("No user authenticated".getBytes());
         }
 
-        logger.info("User [" + username + "] is initiating a verification process.");
+        logger.info("User [{}] is initiating a verification process.", username);
 
         try {
             Path encryptedOutputFilePath = enclaveService.process_task(username, file, clientDataB64, processKey);
@@ -97,7 +97,7 @@ public class VerifierController {
             return ResponseEntity.badRequest().body("No user authenticated");
         }
 
-        logger.info("User [" + username + "] is stopping a verifier process.");
+        logger.info("User [{}] is stopping a verifier process.", username);
 
         enclaveService.stop_enclave(username, processKey);
 

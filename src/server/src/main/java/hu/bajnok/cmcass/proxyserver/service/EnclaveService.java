@@ -84,7 +84,7 @@ public class EnclaveService {
                     out.flush();
 
                     enclavePublicKey_b64 = in.readUTF();
-                    logger.info("Enclave launched on port " + port + " with public key: " + enclavePublicKey_b64);
+                    logger.info("Enclave launched on port {} with public key: {}", port, enclavePublicKey_b64);
                     started = true;
                     break;
                 }
@@ -141,7 +141,6 @@ public class EnclaveService {
         // 1. Get the process related to the user
         int processId;
         try {
-            logger.info("Retrieving process ID for user: {} with process key: {}", username, processKey);
             processId = dbService.getProcessPort(username, processKey);
         }
         catch (Exception e) {
@@ -156,9 +155,11 @@ public class EnclaveService {
 
         // connect to the enclave process
         try (Socket s = new Socket(HOST, port)) {
+            logger.info("Connected to enclave process on port {}", port);
+
             String encryptedOutputFileName = getEnclaveProcessResult(clientDataB64, s);
 
-            logger.info("Received encrypted output filename: " + encryptedOutputFileName);
+            logger.info("Sending encrypted output: {}", encryptedOutputFileName);
 
             return Paths.get(ENCLAVE_PREFIX + port, encryptedOutputFileName);
         }

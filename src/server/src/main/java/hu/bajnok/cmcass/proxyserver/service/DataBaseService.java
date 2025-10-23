@@ -27,6 +27,12 @@ public class DataBaseService {
         this.passwordEncoder = passwordEncoder;
     }
 
+    /**
+     * Add a new process for a user.
+     * @param username username of the user
+     * @param port port number of the process
+     * @param processKey public key of the process
+     */
     @Transactional
     public void addProcess(String username, int port, String processKey) {
         User user = userRepository.findByUsername(username)
@@ -38,25 +44,25 @@ public class DataBaseService {
         processRepository.save(process);
     }
 
+    /**
+     * Get the port of a process by its key for a specific user.
+     * @param username username of the user
+     * @param processKey key of the process
+     * @return port number of the process
+     */
     public int getProcessPort(String username, String processKey) {
-        logger.info("Retrieving process port for user: <{}> and processKey: <{}>", username, processKey);
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new UsernameNotFoundException("User not found"));
-        logger.info("User found: <{}>", user.getId());
-        List<Process> processes = user.getProcesses();
-        logger.info("User has <{}> processes", processes.size());
-
-        processes = processRepository.findAll();
-        for (Process p : processes) {
-            logger.info("Process found: key=<{}>, port=<{}>", p.getKey(), p.getPort());
-        }
-
         Process process = processRepository.findByKeyAndUser_Id(processKey, user.getId())
                 .orElseThrow(() -> new IllegalArgumentException("Invalid process key"));
-
         return process.getPort();
     }
 
+    /**
+     * Stop and remove a process for a user by its key.
+     * @param username username of the user
+     * @param processKey key of the process
+     */
     @Transactional
     public void stopProcess(String username, String processKey) {
         User user = userRepository.findByUsername(username)
@@ -65,7 +71,11 @@ public class DataBaseService {
         userRepository.save(user);
     }
 
-    public int getNewProcessPort() {
+    /**
+     * Get a new unique port number for a process.
+     * @return new port number
+     */
+    public synchronized int getNewProcessPort() {
         return processRepository.findAllProcessPorts().stream()
                 .max(Integer::compareTo)
                 .orElse(0) + 1;
