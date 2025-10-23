@@ -27,7 +27,7 @@ RUN chmod +x /app/scripts/*
 RUN cd src/server && mvn clean package
 
 # Initialize Occlum environment
-RUN occlum-javac src/enclave/VerifierRunner.java -d /app/src/enclave/
+RUN javac src/enclave/VerifierRunner.java -d /app/src/enclave/
 
 WORKDIR /app
 
