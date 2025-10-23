@@ -148,12 +148,9 @@ public class RemoteClient {
                    .header("Content-Type", "application/json")
                    .build();
 
-           System.out.println("Sending request: " + regRequest.method() + " " + regRequest.uri());
            regRequest.headers().map().forEach((k, v) -> System.out.println("Request header: " + k + " = " + String.join(",", v)));
            HttpResponse<String> regResponse = httpClient.send(regRequest, HttpResponse.BodyHandlers.ofString());
 
-           System.out.println("Received response: status=" + regResponse.statusCode());
-           System.out.println("Response body: " + regResponse.body());
         } catch (Exception e) {
             // Ignore registration errors (e.g. user already exists)
         }
@@ -168,15 +165,14 @@ public class RemoteClient {
                     .GET()
                     .build();
 
-            System.out.println("Sending request: " + initRequest.method() + " " + initRequest.uri());
             initRequest.headers().map().forEach((k, v) -> System.out.println("Request header: " + k + " = " + String.join(",", v)));
 
             java.net.http.HttpResponse<String> initResponse = httpClient.send(initRequest, java.net.http.HttpResponse.BodyHandlers.ofString());
 
-            System.out.println("Received response: status=" + initResponse.statusCode());
-            System.out.println("Response body: " + initResponse.body());
-
             enclavePubB64 = initResponse.body();
+
+            System.out.println("Received Enclave Public Key: " + enclavePubB64);
+
             byte[] enclavePubBytes = Base64.getDecoder().decode(enclavePubB64);
             KeyFactory kf = KeyFactory.getInstance("EC");
             enclavePub = kf.generatePublic(new X509EncodedKeySpec(enclavePubBytes));
@@ -187,7 +183,6 @@ public class RemoteClient {
         Path encFilePath;
         String payloadB64;
         try {
-            // Send payload and file for processing and receive encrypted result
             payloadB64 = encryptKeyMaterials(enclavePub);
             encFilePath = Paths.get(encryptFile(filename));
         } catch (Exception e) {
@@ -203,12 +198,6 @@ public class RemoteClient {
             data.put("publicKey", enclavePubB64);
             String boundary = "----WebKitFormBoundary" + System.currentTimeMillis();
 
-            System.out.println("Sending processing request to " + baseUrl + "/process");
-            System.out.println("Request body will include boundary: " + boundary);
-            System.out.println("Client Data: " + payloadB64);
-            System.out.println("File Path: " + encFilePath);
-            System.out.println("Public Key: " + enclavePubB64);
-
             response = httpClient.send(
                     java.net.http.HttpRequest.newBuilder()
                             .uri(new java.net.URI(baseUrl + "/process"))
@@ -218,8 +207,6 @@ public class RemoteClient {
                             .build(),
                     java.net.http.HttpResponse.BodyHandlers.ofByteArray()
             );
-
-            System.out.println("Received response: status=" + response.statusCode());
 
             if (response.statusCode() != 200) {
                 throw new RuntimeException("Failed to process file: " + new String(response.body(), StandardCharsets.UTF_8));
@@ -295,13 +282,23 @@ public class RemoteClient {
         if (host == null || host.isEmpty()) {
             host = "localhost";
         }
-        int port = Integer.parseInt(cnsl.readLine("Enter service port (default: 8080): ", "8080"));
-        String userName = cnsl.readLine("Enter username: ");
+        String port = cnsl.readLine("Enter service port (default: 8080): ");
+        if (port == null || port.isEmpty()) {
+            port = "8080";
+        }
+        String userName = cnsl.readLine("Enter username (default: test): ");
+        if (userName == null || userName.isEmpty()) {
+            userName = "test";
+        }
+
         String password = new String(cnsl.readPassword("Enter password: "));
-        String filename = cnsl.readLine("Enter filename to process: ");
+        String filename = cnsl.readLine("Enter filename to process (default: test.zip): ");
+        if (filename == null || filename.isEmpty()) {
+            filename = "test.zip";
+        }
 
         RemoteClient client = new RemoteClient();
-        client.run(host, port, userName, password, filename);
+        client.run(host, Integer.parseInt(port), userName, password, filename);
     }
 }
 
