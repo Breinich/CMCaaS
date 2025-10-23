@@ -11,6 +11,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import hu.bajnok.cmcass.proxyserver.repository.UserRepository;
 
+import java.util.List;
+
 @Service
 public class DataBaseService {
 
@@ -37,8 +39,17 @@ public class DataBaseService {
     }
 
     public int getProcessPort(String username, String processKey) {
+        logger.info("Retrieving process port for user: <{}> and processKey: <{}>", username, processKey);
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+        logger.info("User found: <{}>", user.getId());
+        List<Process> processes = user.getProcesses();
+        logger.info("User has <{}> processes", processes.size());
+
+        processes = processRepository.findAll();
+        for (Process p : processes) {
+            logger.info("Process found: key=<{}>, port=<{}>", p.getKey(), p.getPort());
+        }
 
         Process process = processRepository.findByKeyAndUser_Id(processKey, user.getId())
                 .orElseThrow(() -> new IllegalArgumentException("Invalid process key"));
