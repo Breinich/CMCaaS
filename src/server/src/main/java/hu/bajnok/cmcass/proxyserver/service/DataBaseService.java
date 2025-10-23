@@ -3,6 +3,7 @@ package hu.bajnok.cmcass.proxyserver.service;
 import hu.bajnok.cmcass.proxyserver.model.Process;
 import hu.bajnok.cmcass.proxyserver.model.User;
 import hu.bajnok.cmcass.proxyserver.repository.ProcessRepository;
+import jakarta.transaction.Transactional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.security.core.userdetails.*;
@@ -26,6 +27,7 @@ public class DataBaseService {
         this.passwordEncoder = passwordEncoder;
     }
 
+    @Transactional
     public void addProcess(String username, int processId, String processKey) {
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new UsernameNotFoundException("User not found"));
@@ -46,6 +48,7 @@ public class DataBaseService {
         return process.getId();
     }
 
+    @Transactional
     public void stopProcess(String username, String processKey) {
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new UsernameNotFoundException("User not found"));
@@ -59,6 +62,7 @@ public class DataBaseService {
                 .orElse(0) + 1;
     }
 
+    @Transactional
     public void registerUser(String username, String password) {
         if (userRepository.findByUsername(username).isPresent()) {
             throw new IllegalArgumentException("Username already exists");
