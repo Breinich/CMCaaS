@@ -127,4 +127,12 @@ public class DataBaseService {
                 .orElseThrow(() -> new IllegalArgumentException("Invalid process key"));
         return process.getStatus();
     }
+
+    public boolean doesVerificationExist(String username, String processKey) {
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+        Process process = processRepository.findByKeyAndUser_Id(processKey, user.getId())
+                .orElse(null);
+        return process != null;
+    }
 }

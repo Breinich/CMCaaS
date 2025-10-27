@@ -243,7 +243,7 @@ public class EnclaveService {
 
     public byte[] getEncryptedResults(String username, String processKey) {
         // 0. Check if there is a verification in progress
-        if (!dbService.isVerificationInProgress(username, processKey)) {
+        if (!dbService.doesVerificationExist(username, processKey)) {
             throw new IllegalArgumentException("There isn't any verification in progress for this enclave.");
         }
 
