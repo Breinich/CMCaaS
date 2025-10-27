@@ -165,6 +165,13 @@ public class VerifierRunner {
      */
     private String processFile(String filename) {
         // TODO: process file (e.g. run model)
+
+        try {
+            Thread.sleep(1000*120); // simulate long processing
+        } catch (InterruptedException e) {
+            System.err.println("Process interrupted");
+        }
+
         return filename;
     }
 
