@@ -239,7 +239,8 @@ public class RemoteClient {
                     Files.write(outputFile, pollResp.body());
                     completed = true;
                 } else {
-                    System.out.println("Result not ready yet (status " + pollResp.statusCode() + ")");
+                    System.out.println("Result not ready yet (status " + pollResp.statusCode() + "): "
+                            + new String(pollResp.body(), StandardCharsets.UTF_8));
                 }
             }
         } catch (Exception e){
