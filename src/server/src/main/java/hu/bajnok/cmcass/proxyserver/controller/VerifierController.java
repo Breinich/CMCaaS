@@ -11,6 +11,8 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Map;
 
 @RestController
@@ -68,7 +70,10 @@ public class VerifierController {
         logger.info("User [{}] is initiating a verification process.", username);
 
         try {
-            enclaveService.createVerificationJob(username, file, clientDataB64, processKey);
+            Path tempFilePath = Files.createTempFile("upload_", ".zip");
+            file.transferTo(tempFilePath);
+
+            enclaveService.createVerificationJob(username, tempFilePath, clientDataB64, processKey);
 
             return ResponseEntity.ok("Verification in progress.");
         }

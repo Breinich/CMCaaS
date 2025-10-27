@@ -135,13 +135,13 @@ public class EnclaveService {
      * Process the uploaded file by sending it to the enclave process
      *
      * @param username      username of the authenticated user
-     * @param file          uploaded file
+     * @param tempFileName temporary file path of the uploaded file
      * @param clientDataB64 Base64 encoded client data
      * @param processKey    public key of the enclave process
      * @throws IOException if communication with the enclave fails
      */
     @Async("asyncExecutor")
-    public void createVerificationJob(String username, MultipartFile file, String clientDataB64, String processKey) throws IOException {
+    public void createVerificationJob(String username, Path tempFileName, String clientDataB64, String processKey) throws IOException {
         // 0. check if there is a verification in progress
         if (dbService.isVerificationInProgress(username, processKey)) {
             throw new IllegalArgumentException("A verification is already in progress for this enclave.");
@@ -160,7 +160,7 @@ public class EnclaveService {
 
         // save the uploaded file to the enclave's directory
         Path path = Paths.get(ENCLAVE_PREFIX + port, INPUT_FILE);
-        file.transferTo(path);
+        Files.move(tempFileName, path, StandardCopyOption.REPLACE_EXISTING);
 
         // connect to the enclave process
         try (Socket s = new Socket(HOST, port)) {
