@@ -1,4 +1,5 @@
 import java.net.URI;
+import java.net.URLEncoder;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
@@ -227,7 +228,7 @@ public class RemoteClient {
                 Thread.sleep(10000); // wait 10 seconds between polls
 
                 HttpRequest pollRequest = HttpRequest.newBuilder()
-                        .uri(new URI(baseUrl + "/process?publicKey=" + enclavePubB64))
+                        .uri(new URI(baseUrl + "/process?publicKey=" + URLEncoder.encode(enclavePubB64, StandardCharsets.UTF_8)))
                         .header("Authorization", "Basic " + credentials)
                         .GET()
                         .build();
