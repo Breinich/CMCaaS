@@ -11,8 +11,6 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.Map;
 
 @RestController
@@ -56,10 +54,32 @@ public class VerifierController {
      * @param user Authenticated user details
      * @return Encrypted output file
      */
-    @PostMapping(value = "/process", consumes = MediaType.MULTIPART_FORM_DATA_VALUE, produces = MediaType.APPLICATION_OCTET_STREAM_VALUE)
-    public ResponseEntity<byte[]> processEncryptedFile(
+    @PostMapping(value = "/process", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<String> processEncryptedFile(
             @RequestParam("file") MultipartFile file,
             @RequestParam("clientData") String clientDataB64,
+            @RequestParam("publicKey") String processKey,
+            @AuthenticationPrincipal UserDetails user) {
+        String username = (user != null) ? user.getUsername() : null;
+        if (username == null) {
+            return ResponseEntity.badRequest().body("No user authenticated");
+        }
+
+        logger.info("User [{}] is initiating a verification process.", username);
+
+        try {
+            enclaveService.createVerificationJob(username, file, clientDataB64, processKey);
+
+            return ResponseEntity.ok("Verification in progress.");
+        }
+        catch (Exception e) {
+            return ResponseEntity.badRequest().body("Error during verification: " + e.getMessage());
+        }
+
+    }
+
+    @GetMapping(value = "/process", produces = MediaType.APPLICATION_OCTET_STREAM_VALUE)
+    public ResponseEntity<byte[]> getEncryptedResults(
             @RequestParam("publicKey") String processKey,
             @AuthenticationPrincipal UserDetails user) {
         String username = (user != null) ? user.getUsername() : null;
@@ -67,19 +87,17 @@ public class VerifierController {
             return ResponseEntity.badRequest().body("No user authenticated".getBytes());
         }
 
-        logger.info("User [{}] is initiating a verification process.", username);
+        logger.info("User [{}] is requesting the encrypted results for enclave with public key {}.", username, processKey);
 
         try {
-            Path encryptedOutputFilePath = enclaveService.process_task(username, file, clientDataB64, processKey);
+            byte[] encryptedOutputFile = enclaveService.getEncryptedResults(username, processKey);
 
-            byte[] encryptedFile = Files.readAllBytes(encryptedOutputFilePath);
             return ResponseEntity.ok()
-                    .header("Content-Disposition", "attachment; filename=\""
-                            + encryptedOutputFilePath.getFileName() + "\"")
-                    .body(encryptedFile);
+                    .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                    .body(encryptedOutputFile);
         }
         catch (Exception e) {
-            return ResponseEntity.status(500).body(("Error processing file: " + e.getMessage()).getBytes());
+            return ResponseEntity.badRequest().body(("Error retrieving the results: " + e.getMessage()).getBytes());
         }
 
     }

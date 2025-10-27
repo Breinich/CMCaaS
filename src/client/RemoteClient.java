@@ -149,7 +149,7 @@ public class RemoteClient {
                    .build();
 
            regRequest.headers().map().forEach((k, v) -> System.out.println("Request header: " + k + " = " + String.join(",", v)));
-           HttpResponse<String> regResponse = httpClient.send(regRequest, HttpResponse.BodyHandlers.ofString());
+           httpClient.send(regRequest, HttpResponse.BodyHandlers.ofString());
 
         } catch (Exception e) {
             // Ignore registration errors (e.g. user already exists)
@@ -189,7 +189,7 @@ public class RemoteClient {
             throw new RuntimeException("Failed to encrypt payload: " + e.getMessage(), e);
         }
 
-        HttpResponse<byte[]> response;
+        HttpResponse<String> response;
         try {
 
             Map<Object, Object> data = new HashMap<>();
@@ -198,6 +198,7 @@ public class RemoteClient {
             data.put("publicKey", enclavePubB64);
             String boundary = "----WebKitFormBoundary" + System.currentTimeMillis();
 
+            // start verification
             response = httpClient.send(
                     java.net.http.HttpRequest.newBuilder()
                             .uri(new java.net.URI(baseUrl + "/process"))
@@ -205,23 +206,50 @@ public class RemoteClient {
                             .header("Content-Type", "multipart/form-data; boundary=" + boundary)
                             .POST(ofMultipartData(data, boundary))
                             .build(),
-                    java.net.http.HttpResponse.BodyHandlers.ofByteArray()
+                    HttpResponse.BodyHandlers.ofString()
             );
 
             if (response.statusCode() != 200) {
-                throw new RuntimeException("Failed to process file: " + new String(response.body(), StandardCharsets.UTF_8));
+                throw new RuntimeException("Failed to start the verification: " + response.body());
             }
         } catch (Exception e) {
-            throw new RuntimeException("Failed to send processing request: " + e.getMessage(), e);
+            throw new RuntimeException("Failed to send verification request: " + e.getMessage(), e);
         }
 
-        try {
-            // Save the encrypted response to a file
-            String encResponseFilename = "enc_response_" + new File(filename).getName();
-            Files.write(Paths.get(encResponseFilename), response.body());
+        System.out.println("Verification job started. Polling for results...");
 
+        HttpResponse<byte[]> pollResp;
+        boolean completed = false;
+        Path outputFile = Paths.get("enc_response_" + new File(filename).getName());
+
+        try {
+            while (!completed) {
+                Thread.sleep(10000); // wait 10 seconds between polls
+
+                HttpRequest pollRequest = HttpRequest.newBuilder()
+                        .uri(new URI(baseUrl + "/process?publicKey=" + enclavePubB64))
+                        .header("Authorization", "Basic " + credentials)
+                        .GET()
+                        .build();
+
+                pollResp = httpClient.send(pollRequest, HttpResponse.BodyHandlers.ofByteArray());
+
+                if (pollResp.statusCode() == 200) {
+                    System.out.println("Result ready, downloading...");
+                    Files.write(outputFile, pollResp.body());
+                    completed = true;
+                } else {
+                    System.out.println("Result not ready yet (status " + pollResp.statusCode() + ")");
+                }
+            }
+        } catch (Exception e){
+            System.err.println("Failed to download results: " + e.getMessage());
+        }
+
+
+        try {
             // Decrypt the response file
-            String decryptedFilename = decryptFile(encResponseFilename);
+            String decryptedFilename = decryptFile(outputFile.toString());
             System.out.println("Decrypted result from enclave: " + decryptedFilename);
         } catch (Exception e) {
             throw new RuntimeException("Error during run: " + e.getMessage(), e);

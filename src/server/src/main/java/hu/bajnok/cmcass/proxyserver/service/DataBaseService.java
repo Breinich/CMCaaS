@@ -1,6 +1,7 @@
 package hu.bajnok.cmcass.proxyserver.service;
 
 import hu.bajnok.cmcass.proxyserver.model.Process;
+import hu.bajnok.cmcass.proxyserver.model.ProcessStatus;
 import hu.bajnok.cmcass.proxyserver.model.User;
 import hu.bajnok.cmcass.proxyserver.repository.ProcessRepository;
 import jakarta.transaction.Transactional;
@@ -35,6 +36,7 @@ public class DataBaseService {
         Process process = new Process();
         process.setPort(port);
         process.setKey(processKey);
+        process.setStatus(ProcessStatus.CREATED);
         user.addProcess(process);
         processRepository.save(process);
     }
@@ -86,5 +88,43 @@ public class DataBaseService {
         user.setPassword(passwordEncoder.encode(password));
         user.setRole("USER");
         userRepository.save(user);
+    }
+
+    public boolean isVerificationInProgress(String username, String processKey) {
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+        Process process = processRepository.findByKeyAndUser_Id(processKey, user.getId())
+                .orElse(null);
+        return process != null;
+    }
+
+    /**
+     * Update the verification status of a process.
+     * @param username username of the user
+     * @param processKey key of the process
+     * @param processStatus new status of the process
+     */
+    @Transactional
+    public void updateProcessVerificationStatus(String username, String processKey, ProcessStatus processStatus) {
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+        Process process = processRepository.findByKeyAndUser_Id(processKey, user.getId())
+                .orElseThrow(() -> new IllegalArgumentException("Invalid process key"));
+        process.setStatus(processStatus);
+        processRepository.save(process);
+    }
+
+    /**
+     * Get the verification status of a process.
+     * @param username username of the user
+     * @param processKey key of the process
+     * @return status of the process
+     */
+    public ProcessStatus getProcessVerificationStatus(String username, String processKey) {
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+        Process process = processRepository.findByKeyAndUser_Id(processKey, user.getId())
+                .orElseThrow(() -> new IllegalArgumentException("Invalid process key"));
+        return process.getStatus();
     }
 }

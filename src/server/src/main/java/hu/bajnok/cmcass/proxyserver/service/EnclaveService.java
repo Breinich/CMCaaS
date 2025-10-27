@@ -1,7 +1,9 @@
 package hu.bajnok.cmcass.proxyserver.service;
 
+import hu.bajnok.cmcass.proxyserver.model.ProcessStatus;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -19,6 +21,7 @@ public class EnclaveService {
     private static final String ENCLAVE_TOOL = "verifier";
     private static final String ENCLAVE_PREFIX = "occlum_verifier_";
     private static final String INPUT_FILE = "input.zip";
+    private static final String OUTPUT_FILE = "output.zip";
     private static final int BASE_PORT = 5000;
 
     private static final String HOST = "localhost";
@@ -130,14 +133,20 @@ public class EnclaveService {
 
     /**
      * Process the uploaded file by sending it to the enclave process
-     * @param username username of the authenticated user
-     * @param file uploaded file
+     *
+     * @param username      username of the authenticated user
+     * @param file          uploaded file
      * @param clientDataB64 Base64 encoded client data
-     * @param processKey public key of the enclave process
-     * @return Path to the encrypted output file
+     * @param processKey    public key of the enclave process
      * @throws IOException if communication with the enclave fails
      */
-    public Path process_task(String username, MultipartFile file, String clientDataB64, String processKey) throws IOException {
+    @Async("asyncExecutor")
+    public void createVerificationJob(String username, MultipartFile file, String clientDataB64, String processKey) throws IOException {
+        // 0. check if there is a verification in progress
+        if (dbService.isVerificationInProgress(username, processKey)) {
+            throw new IllegalArgumentException("A verification is already in progress for this enclave.");
+        }
+
         // 1. Get the process related to the user
         int processId;
         try {
@@ -156,12 +165,15 @@ public class EnclaveService {
         // connect to the enclave process
         try (Socket s = new Socket(HOST, port)) {
             logger.info("Connected to enclave process on port {}", port);
-
-            String encryptedOutputFileName = getEnclaveProcessResult(clientDataB64, s);
-
-            logger.info("Sending encrypted output: {}", encryptedOutputFileName);
-
-            return Paths.get(ENCLAVE_PREFIX + port, encryptedOutputFileName);
+            dbService.updateProcessVerificationStatus(username, processKey, ProcessStatus.RUNNING);
+            boolean success = startVerification(clientDataB64, s);
+            if (success) {
+                dbService.updateProcessVerificationStatus(username, processKey, ProcessStatus.COMPLETED);
+                logger.info("Verification completed successfully for user {} enclave {}", username, processKey);
+            } else {
+                dbService.updateProcessVerificationStatus(username, processKey, ProcessStatus.ERROR);
+                logger.error("Verification failed for user {} enclave {}", username, processKey);
+            }
         }
         catch (IOException e) {
             // if communication fails, assume the enclave process is down, clean up the database
@@ -174,10 +186,10 @@ public class EnclaveService {
      * Send process command to the enclave and get the result filename
      * @param clientDataB64 client data in Base64 encoding
      * @param s connected socket to the enclave process
-     * @return encrypted output filename
+     * @return true if verification finished successfully
      * @throws IOException if communication fails
      */
-    private static String getEnclaveProcessResult(String clientDataB64, Socket s) throws IOException {
+    private static boolean startVerification(String clientDataB64, Socket s) throws IOException {
         DataOutputStream out = new DataOutputStream(s.getOutputStream());
         out.writeUTF("process");
         out.flush();
@@ -190,7 +202,16 @@ public class EnclaveService {
         out.flush();
         // read encrypted output filename
         DataInputStream in = new DataInputStream(s.getInputStream());
-        return in.readUTF();
+        String resultFile = in.readUTF();
+
+        if (!resultFile.isEmpty()) {
+            Path source = Paths.get(ENCLAVE_PREFIX + s.getPort(), resultFile);
+            Path target = Paths.get(ENCLAVE_PREFIX + s.getPort(), OUTPUT_FILE);
+            Files.move(source, target, StandardCopyOption.REPLACE_EXISTING);
+            logger.info("Received encrypted output filename: {}", resultFile);
+            return true;
+        }
+        return false;
     }
 
     /**
@@ -216,6 +237,32 @@ public class EnclaveService {
         catch (IOException ignored) {}
         finally {
             dbService.stopProcess(username, processKey);
+        }
+    }
+
+    public byte[] getEncryptedResults(String username, String processKey) {
+        // 0. Check if there is a verification in progress
+        if (!dbService.isVerificationInProgress(username, processKey)) {
+            throw new IllegalArgumentException("There isn't any verification in progress for this enclave.");
+        }
+
+        // 1. Check the process status
+        ProcessStatus status = dbService.getProcessVerificationStatus(username, processKey);
+
+        if (status == ProcessStatus.RUNNING || status == ProcessStatus.CREATED) {
+            throw new IllegalStateException("Verification is still in progress.");
+        } else if (status == ProcessStatus.ERROR) {
+            throw new IllegalStateException("Verification ended with an error.");
+        }
+
+        // 2. Read the result file
+        int processPort = dbService.getProcessPort(username, processKey);
+        Path outputPath = Paths.get(ENCLAVE_PREFIX + (BASE_PORT + processPort), OUTPUT_FILE);
+
+        try {
+            return Files.readAllBytes(outputPath);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
         }
     }
 }

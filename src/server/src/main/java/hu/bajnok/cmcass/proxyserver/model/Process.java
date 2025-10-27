@@ -19,6 +19,10 @@ public class Process {
     @Column(nullable = false, unique = true)
     private String key;
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private ProcessStatus status;
+
     @ManyToOne
     @JoinColumn(name = "user_id", referencedColumnName = "id", nullable = false)
     private User user;
