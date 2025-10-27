@@ -95,7 +95,7 @@ public class DataBaseService {
                 .orElseThrow(() -> new UsernameNotFoundException("User not found"));
         Process process = processRepository.findByKeyAndUser_Id(processKey, user.getId())
                 .orElse(null);
-        return process != null;
+        return process != null && (process.getStatus() == ProcessStatus.RUNNING);
     }
 
     /**
