@@ -9,6 +9,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.*;
 import java.net.Socket;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -148,15 +149,15 @@ public class EnclaveService {
         }
 
         // 1. Get the process related to the user
-        int processId;
+        int processPort;
         try {
-            processId = dbService.getProcessPort(username, processKey);
+            processPort = dbService.getProcessPort(username, processKey);
         }
         catch (Exception e) {
             throw new IllegalStateException("Enclave process is not running: " + e.getMessage());
         }
 
-        int port = BASE_PORT + processId;
+        int port = BASE_PORT + processPort;
 
         // save the uploaded file to the enclave's directory
         Path path = Paths.get(ENCLAVE_PREFIX + port, INPUT_FILE);
@@ -250,10 +251,13 @@ public class EnclaveService {
         ProcessStatus status = dbService.getProcessVerificationStatus(username, processKey);
 
         if (status == ProcessStatus.RUNNING || status == ProcessStatus.CREATED) {
+            logger.info("Verification is still in progress for user {} enclave {}", username, processKey);
             throw new IllegalStateException("Verification is still in progress.");
         } else if (status == ProcessStatus.ERROR) {
-            throw new IllegalStateException("Verification ended with an error.");
+            return "Verification ended with an error.".getBytes(StandardCharsets.UTF_8);
         }
+
+        logger.info("Verification ended successfully for user {} enclave {}", username, processKey);
 
         // 2. Read the result file
         int processPort = dbService.getProcessPort(username, processKey);
@@ -262,6 +266,7 @@ public class EnclaveService {
         try {
             return Files.readAllBytes(outputPath);
         } catch (IOException e) {
+            logger.error("Failed to read output file for user {} enclave {}", username, processKey, e);
             throw new RuntimeException(e);
         }
     }
