@@ -1,0 +1,3 @@
+solver=eldarica
+version=2.1
+name=2.1

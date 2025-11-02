@@ -1,0 +1,2 @@
+-theory.bv.eager=false
+-theory.fp.mode=2

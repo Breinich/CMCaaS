@@ -6,6 +6,8 @@ targets:
     copy:
       - files:
           - /app/src/enclave/VerifierRunner.class
+      - dirs:
+          - /app/src/enclave/theta
   - target: /usr/lib/jvm
     copy:
       - dirs:
