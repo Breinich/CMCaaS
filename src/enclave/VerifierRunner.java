@@ -7,16 +7,24 @@ import java.security.*;
 import java.security.spec.*;
 import javax.crypto.*;
 import javax.crypto.spec.*;
+import java.util.ArrayList;
 import java.util.Base64;
 import java.io.*;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
+import java.util.List;
+import java.util.Objects;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipInputStream;
 
 /**
  * enclave.RobustEnclaveApp
  */
 public class VerifierRunner {
     private static final String SHARED_DIR = "/host";
+    private static final String EXTRACTION_DIR = "/tmp/extracted";
+    private static final String DECRYPTED_DIR = "/tmp/decrypted";
+    private static final String OUTPUT_DIR = "/tmp/output";
 
     private PrivateKey privateKey;
     private PublicKey publicKey;
@@ -148,41 +156,101 @@ public class VerifierRunner {
         cipher.init(Cipher.DECRYPT_MODE, aesKey, gcmSpec);
 
         // Read encrypted file
-        Path filePath = Paths.get(SHARED_DIR, filename);
-        byte[] encFile = java.nio.file.Files.readAllBytes(filePath);
+        Path inPath = Paths.get(SHARED_DIR, filename);
+        Path outPath = Paths.get(DECRYPTED_DIR, filename);
+        byte[] encFile = java.nio.file.Files.readAllBytes(inPath);
         // Decrypt
         byte[] decFile = cipher.doFinal(encFile);
         // Write the decrypted file
-        java.nio.file.Files.write(filePath, decFile);
+        java.nio.file.Files.write(outPath, decFile);
 
         System.out.println("Decrypted file: " + filename);
+    }
+
+    private static String sanitizeFilename(String filename) {
+        return filename.replaceAll("[^a-zA-Z0-9._-]", "_");
     }
 
     /**
      * Unzip the file and run the model checking
      * @param filename file name
-     * @return output file name (zip)
+     * @return output file path (txt)
      */
-    private String processFile(String filename) {
-        // TODO: process file (e.g. run model)
+    private Path processFile(String filename) {
+        System.out.println("Processing file: " + filename);
 
-        try {
-            Thread.sleep(1000*120); // simulate long processing
-        } catch (InterruptedException e) {
-            System.err.println("Process interrupted");
+        // extract the zip file
+        try (ZipInputStream zis = new ZipInputStream(new FileInputStream(DECRYPTED_DIR + "/" + filename))) {
+            ZipEntry entry;
+            while ((entry = zis.getNextEntry()) != null) {
+                File outFile = new File(EXTRACTION_DIR, sanitizeFilename(entry.getName()));
+                if (entry.isDirectory()) {
+                    outFile.mkdirs();
+                } else {
+                    try (FileOutputStream fos = new FileOutputStream(outFile)) {
+                        byte[] buffer = new byte[1024];
+                        int len;
+                        while ((len = zis.read(buffer)) > 0) {
+                            fos.write(buffer, 0, len);
+                        }
+                    }
+                }
+                zis.closeEntry();
+            }
+        }
+        catch (IOException e) {
+            System.err.println("Error extracting zip file: " + e.getMessage());
         }
 
-        return filename;
+        System.out.println("Starting verification...");
+
+        List<String> params = new ArrayList<>();
+        int input_ctr = 0;
+        for (File file : Objects.requireNonNull(new File(EXTRACTION_DIR).listFiles())) {
+            if (file.isFile()) {
+                if (file.getName().endsWith(".i")) {
+                    params.set(0, file.getAbsolutePath());
+                    input_ctr++;
+                } else if (file.getName().endsWith(".prp")) {
+                    params.add("--property");
+                    params.add(file.getAbsolutePath());
+                }
+            }
+        }
+        if (input_ctr != 1) {
+            throw new IllegalArgumentException("Expected exactly one .i input file, found: " + input_ctr);
+        }
+
+        File logFile = new File(OUTPUT_DIR, "theta-log.txt");
+
+        try {
+            ProcessBuilder pb = new ProcessBuilder(SHARED_DIR + "/theta/theta-start.sh", String.join(" ", params));
+
+            pb.redirectErrorStream(true);
+            pb.redirectOutput(logFile);
+
+            Process process = pb.start();
+            int exitCode = process.waitFor();
+            if (exitCode != 0) {
+                System.err.println("Verification process failed with exit code: " + exitCode);
+            } else {
+                System.out.println("Verification completed successfully.");
+            }
+        } catch (IOException | InterruptedException e) {
+            System.err.println("Error during verification process: " + e.getMessage());
+        }
+
+        return logFile.getAbsoluteFile().toPath();
     }
 
     /**
      * Encrypt the output file
-     * @param filename file name
+     * @param resultPath file name
      * @return encrypted file name
      */
-    private String encryptResults(String filename) throws Exception {
+    private String encryptResults(Path resultPath) throws Exception {
 
-        byte[] fileBytes = java.nio.file.Files.readAllBytes(java.nio.file.Paths.get(SHARED_DIR, filename));
+        byte[] fileBytes = java.nio.file.Files.readAllBytes(resultPath);
 
         Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
         GCMParameterSpec gcmSpec = new GCMParameterSpec(128, nonce);
@@ -190,7 +258,7 @@ public class VerifierRunner {
 
 
         byte[] encFile = cipher.doFinal(fileBytes);
-        String encryptedFilename = "enc_" + filename;
+        String encryptedFilename = "enc_" + resultPath;
 
         java.nio.file.Files.write(java.nio.file.Paths.get(SHARED_DIR, encryptedFilename), encFile);
 
@@ -210,9 +278,9 @@ public class VerifierRunner {
 
         decryptFile(filename);
 
-        String result_name = processFile(filename);
+        Path resultFilePath = processFile(filename);
 
-        return encryptResults(result_name);
+        return encryptResults(resultFilePath);
     }
 
     public VerifierRunner(int port) throws Exception {
