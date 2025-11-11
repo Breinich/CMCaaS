@@ -13,7 +13,6 @@ import java.io.*;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
-import java.util.Objects;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
@@ -150,6 +149,14 @@ public class VerifierRunner {
      * @param filename file name
      */
     private void decryptFile(String filename) throws Exception {
+        // Ensure decrypted directory exists
+        java.nio.file.Files.createDirectories(java.nio.file.Paths.get(DECRYPTED_DIR));
+
+        // Ensure encryption context is present
+        if (aesKey == null || nonce == null) {
+            throw new IllegalStateException("Missing encryption context: PUBLICKEY header must be sent before VERIFY");
+        }
+
         // Decrypt AES-GCM
         Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
         GCMParameterSpec gcmSpec = new GCMParameterSpec(128, nonce);
@@ -158,9 +165,20 @@ public class VerifierRunner {
         // Read encrypted file
         Path inPath = Paths.get(SHARED_DIR, filename);
         Path outPath = Paths.get(DECRYPTED_DIR, filename);
+
+        if (!java.nio.file.Files.exists(inPath)) {
+            throw new FileNotFoundException("Encrypted input file not found: " + inPath);
+        }
+
         byte[] encFile = java.nio.file.Files.readAllBytes(inPath);
         // Decrypt
         byte[] decFile = cipher.doFinal(encFile);
+
+        // Ensure parent directories for the output file exist
+        if (outPath.getParent() != null) {
+            java.nio.file.Files.createDirectories(outPath.getParent());
+        }
+
         // Write the decrypted file
         java.nio.file.Files.write(outPath, decFile);
 
@@ -179,14 +197,25 @@ public class VerifierRunner {
     private Path processFile(String filename) {
         System.out.println("Processing file: " + filename);
 
+        // Ensure extraction and output directories exist
+        try {
+            java.nio.file.Files.createDirectories(java.nio.file.Paths.get(EXTRACTION_DIR));
+            java.nio.file.Files.createDirectories(java.nio.file.Paths.get(OUTPUT_DIR));
+        } catch (IOException e) {
+            throw new RuntimeException("Unable to create working directories: " + e.getMessage(), e);
+        }
+
         // extract the zip file
-        try (ZipInputStream zis = new ZipInputStream(new FileInputStream(DECRYPTED_DIR + "/" + filename))) {
+        try (ZipInputStream zis = new ZipInputStream(new FileInputStream(Paths.get(DECRYPTED_DIR, filename).toFile()))) {
             ZipEntry entry;
             while ((entry = zis.getNextEntry()) != null) {
                 File outFile = new File(EXTRACTION_DIR, sanitizeFilename(entry.getName()));
                 if (entry.isDirectory()) {
                     outFile.mkdirs();
                 } else {
+                    // Ensure parent exists
+                    File parent = outFile.getParentFile();
+                    if (parent != null && !parent.exists()) parent.mkdirs();
                     try (FileOutputStream fos = new FileOutputStream(outFile)) {
                         byte[] buffer = new byte[1024];
                         int len;
@@ -199,32 +228,46 @@ public class VerifierRunner {
             }
         }
         catch (IOException e) {
-            System.err.println("Error extracting zip file: " + e.getMessage());
+            throw new RuntimeException("Error extracting zip file: " + e.getMessage(), e);
         }
 
         System.out.println("Starting verification...");
 
-        List<String> params = new ArrayList<>();
-        int input_ctr = 0;
-        for (File file : Objects.requireNonNull(new File(EXTRACTION_DIR).listFiles())) {
+        // Prepare command arguments for the external verifier
+        String inputFilePath = null;
+        List<String> cmdArgs = new ArrayList<>();
+        List<String> propertyArgs = new ArrayList<>();
+
+        File extractionDir = new File(EXTRACTION_DIR);
+        File[] files = extractionDir.listFiles();
+        if (files == null) files = new File[0];
+
+        for (File file : files) {
             if (file.isFile()) {
                 if (file.getName().endsWith(".i")) {
-                    params.set(0, file.getAbsolutePath());
-                    input_ctr++;
+                    if (inputFilePath != null) {
+                        throw new IllegalArgumentException("Multiple .i input files found");
+                    }
+                    inputFilePath = file.getAbsolutePath();
                 } else if (file.getName().endsWith(".prp")) {
-                    params.add("--property");
-                    params.add(file.getAbsolutePath());
+                    propertyArgs.add("--property");
+                    propertyArgs.add(file.getAbsolutePath());
                 }
             }
         }
-        if (input_ctr != 1) {
-            throw new IllegalArgumentException("Expected exactly one .i input file, found: " + input_ctr);
+        if (inputFilePath == null) {
+            throw new IllegalArgumentException("Expected exactly one .i input file, found none");
         }
 
         File logFile = new File(OUTPUT_DIR, "theta-log.txt");
-
         try {
-            ProcessBuilder pb = new ProcessBuilder(SHARED_DIR + "/theta/theta-start.sh", String.join(" ", params));
+            // Build full command: script + input + properties
+            List<String> command = new ArrayList<>();
+            command.add(Paths.get(SHARED_DIR, "theta", "theta-start.sh").toString());
+            command.add(inputFilePath);
+            command.addAll(propertyArgs);
+
+            ProcessBuilder pb = new ProcessBuilder(command);
 
             pb.redirectErrorStream(true);
             pb.redirectOutput(logFile);
@@ -237,7 +280,7 @@ public class VerifierRunner {
                 System.out.println("Verification completed successfully.");
             }
         } catch (IOException | InterruptedException e) {
-            System.err.println("Error during verification process: " + e.getMessage());
+            throw new RuntimeException("Error during verification process: " + e.getMessage(), e);
         }
 
         return logFile.getAbsoluteFile().toPath();
@@ -258,7 +301,10 @@ public class VerifierRunner {
 
 
         byte[] encFile = cipher.doFinal(fileBytes);
-        String encryptedFilename = "enc_" + resultPath;
+        String encryptedFilename = "enc_" + resultPath.getFileName().toString();
+
+        // Ensure shared dir exists
+        java.nio.file.Files.createDirectories(java.nio.file.Paths.get(SHARED_DIR));
 
         java.nio.file.Files.write(java.nio.file.Paths.get(SHARED_DIR, encryptedFilename), encFile);
 
@@ -294,8 +340,9 @@ public class VerifierRunner {
                 Thread t = new Thread(() -> {
                     try {
                         handle(client);
-                    } catch (Exception e) {
-                        e.printStackTrace();
+                    } catch (Throwable t1) {
+                        System.err.println("Error handling client: " + t1.getMessage());
+                        t1.printStackTrace();
                     }
                     finally {
                         try {
@@ -364,5 +411,5 @@ public class VerifierRunner {
         int port = Integer.parseInt(args[0]);
         new VerifierRunner(port);
     }
-}
 
+}
