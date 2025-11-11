@@ -261,9 +261,18 @@ public class VerifierRunner {
 
         File logFile = new File(OUTPUT_DIR, "theta-log.txt");
         try {
+
+            Path thetaScriptPath = Paths.get( "/theta", "theta-start.sh");
+            // make the sh script executable
+            File scriptFile = thetaScriptPath.toFile();
+            boolean result = scriptFile.setExecutable(true);
+            if (!result) {
+                throw new IOException("Failed to make theta-start.sh executable");
+            }
+
             // Build full command: script + input + properties
             List<String> command = new ArrayList<>();
-            command.add(Paths.get( "/theta", "theta-start.sh").toString());
+            command.add(thetaScriptPath.toString());
             command.add(inputFilePath);
             command.addAll(propertyArgs);
 

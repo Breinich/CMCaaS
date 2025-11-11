@@ -22,6 +22,7 @@ COPY scripts/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 
 COPY scripts /app/scripts/
 RUN chmod +x /app/scripts/*
+RUN chmod +x /app/src/enclave/theta/*.sh
 
 # Build the application
 RUN cd src/server && mvn clean package
