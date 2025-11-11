@@ -263,7 +263,7 @@ public class VerifierRunner {
         try {
             // Build full command: script + input + properties
             List<String> command = new ArrayList<>();
-            command.add(Paths.get(SHARED_DIR, "theta", "theta-start.sh").toString());
+            command.add(Paths.get( "/theta", "theta-start.sh").toString());
             command.add(inputFilePath);
             command.addAll(propertyArgs);
 
