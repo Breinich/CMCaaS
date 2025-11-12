@@ -279,7 +279,7 @@ public class VerifierRunner {
                     System.getenv("THETA_XMX") : "512m"));
             command.add("-Djdk.lang.Process.launchMechanism=posix_spawn");
             command.add("-jar");
-            command.add("theta.jar");
+            command.add("/theta/theta.jar");
             command.add("--input");
             command.add(inputFilePath);
             command.add("--property");
