@@ -45,8 +45,6 @@ public class EnclaveService {
     public String launch_enclave(String username) throws IOException {
         launchLock.lock();
         try {
-            logger.info("Available memory before launching enclave: {} MB", Runtime.getRuntime().freeMemory() / (1024 * 1024));
-
             String enclavePublicKey_b64 = "";
             final int new_id = dbService.getNewProcessPort();
             int port = BASE_PORT + new_id;
