@@ -276,6 +276,9 @@ public class VerifierRunner {
             command.add(inputFilePath);
             command.addAll(propertyArgs);
 
+            System.out.println("Script: " + scriptFile.getAbsolutePath());
+            System.out.println("Command: " + command);
+
             ProcessBuilder pb = new ProcessBuilder(command);
 
             pb.redirectErrorStream(true);
