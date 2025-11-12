@@ -274,6 +274,7 @@ public class VerifierRunner {
             // Build full command: executable + input + properties
             List<String> command = new ArrayList<>();
             command.add("java");
+            command.add("-Xss120m");
             command.add("-Xmx"+(System.getenv("THETA_XMX") != null && !System.getenv("THETA_XMX").isEmpty() ?
                     System.getenv("THETA_XMX") : "512m"));
             command.add("-Djdk.lang.Process.launchMechanism=posix_spawn");
@@ -384,7 +385,6 @@ public class VerifierRunner {
                         handle(client);
                     } catch (Throwable t1) {
                         System.err.println("Error handling client: " + t1.getMessage());
-                        t1.printStackTrace();
                     }
                     finally {
                         try {
