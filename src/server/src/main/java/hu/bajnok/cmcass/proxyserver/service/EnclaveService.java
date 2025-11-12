@@ -11,6 +11,7 @@ import java.io.*;
 import java.net.Socket;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.*;
+import java.util.Scanner;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.locks.ReentrantLock;
@@ -61,6 +62,18 @@ public class EnclaveService {
                     }
                 } catch (IOException e) {
                     logger.error("Error reading enclave stdout", e);
+                }
+                try {
+                    BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(process.getOutputStream(), StandardCharsets.UTF_8));
+                    Scanner scanner = new Scanner(System.in);
+                    while (scanner.hasNextLine()) {
+                        String line = scanner.nextLine();
+                        writer.write(line);
+                        writer.write("\n");
+                        writer.flush();
+                    }
+                } catch (Exception e) {
+                    logger.error("Error writing to enclave stdin", e);
                 }
             });
 
