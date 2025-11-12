@@ -76,7 +76,7 @@ public class EnclaveService {
             });
 
             int attempts = 0;
-            final int maxAttempts = 240; // max 240 seconds
+            final int maxAttempts = 300; // max 300 seconds
             boolean started = false;
 
             while(attempts < maxAttempts){
