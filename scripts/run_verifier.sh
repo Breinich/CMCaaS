@@ -28,20 +28,20 @@ init_instance() {
     occlum init
 
     # Tune Occlum.json for JVM
-    new_json="$(jq '.resource_limits.user_space_size = "4000MB" |
-                    .resource_limits.user_space_max_size = "5000MB" |
+    new_json="$(jq '.resource_limits.user_space_size = "6000MB" |
+                    .resource_limits.user_space_max_size = "6600MB" |
                     .resource_limits.kernel_space_heap_size = "2MB" |
                     .resource_limits.kernel_space_heap_max_size = "64MB" |
                     .resource_limits.max_num_of_threads = 64 |
-                    .process.default_heap_size = "4GB" |
-                    .process.default_mmap_size = "4GB" |
+                    .process.default_heap_size = "2GB" |
+                    .process.default_mmap_size = "2GB" |
                     .process.default_stack_size = "8MB" |
                     .entry_points = ["/usr/lib/jvm/java-21-openjdk-amd64/bin/java"] |
                     .env.default = [
                     "LD_LIBRARY_PATH=/usr/lib/jvm/java-21-openjdk-amd64/lib/server:/usr/lib/jvm/java-21-openjdk-amd64/lib:/lib/x86_64-linux-gnu:/opt/occlum/glibc/lib",
                     "MALLOC_ARENA_MAX=1",
                     "OMP_NUM_THREADS=1",
-                    "THETA_XMX=256m"
+                    "THETA_XMX=128m"
                     ]' Occlum.json)"
     echo "${new_json}" > Occlum.json
 }
@@ -63,7 +63,7 @@ run_verifier() {
     build_verifier
 
     echo -e "${BLUE}occlum run JVM VerifierRunner (enclave id=${enclave_id})${NC}"
-    occlum run /usr/lib/jvm/java-21-openjdk-amd64/bin/java -Xmx1024m -XX:-UseCompressedOops -XX:MaxMetaspaceSize=64m -Dos.name=Linux VerifierRunner "${enclave_id}"
+    occlum run /usr/lib/jvm/java-21-openjdk-amd64/bin/java -Xmx768m -XX:-UseCompressedOops -XX:MaxMetaspaceSize=64m -Dos.name=Linux VerifierRunner "${enclave_id}"
 }
 
 # --- main ---
