@@ -261,7 +261,6 @@ public class VerifierRunner {
 
         File logFile = new File(OUTPUT_DIR, "theta-log.txt");
         try {
-
             Path thetaScriptPath = Paths.get( "/theta", "theta-start.sh");
             // make the sh script executable
             File scriptFile = thetaScriptPath.toFile();
@@ -281,6 +280,7 @@ public class VerifierRunner {
             System.out.println("Command: " + command);
 
             ProcessBuilder pb = new ProcessBuilder(command);
+            pb.environment().put("THETA_XMX", "256m");
 
             pb.redirectErrorStream(true);
             pb.redirectOutput(logFile);
