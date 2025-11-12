@@ -280,8 +280,7 @@ public class VerifierRunner {
             System.out.println("Script: " + scriptFile.getAbsolutePath());
             System.out.println("Command: " + command);
 
-            ProcessBuilder pb = new ProcessBuilder(command);
-            //pb.environment().put("THETA_XMX", "256m");
+            ProcessBuilder pb = new ProcessBuilder("date");
 
             pb.redirectErrorStream(true);
             pb.redirectOutput(logFile);
