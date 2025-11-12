@@ -28,7 +28,7 @@ init_instance() {
     occlum init
 
     # Tune Occlum.json for JVM
-    new_json="$(jq '.resource_limits.user_space_size = "6000MB" |
+    new_json="$(jq '.resource_limits.user_space_size = "1MB" |
                     .resource_limits.user_space_max_size = "6600MB" |
                     .resource_limits.kernel_space_heap_size = "2MB" |
                     .resource_limits.kernel_space_heap_max_size = "64MB" |
@@ -61,7 +61,8 @@ run_verifier() {
     build_verifier
 
     echo -e "${BLUE}occlum run JVM VerifierRunner (enclave id=${enclave_id})${NC}"
-    occlum run /usr/lib/jvm/java-21-openjdk-amd64/bin/java -Xms2G -Xmx3G -XX:-UseCompressedOops -XX:MaxMetaspaceSize=64m -Dos.name=Linux -Djdk.lang.Process.launchMechanism=posix_spawn VerifierRunner "${enclave_id}"
+    occlum run /usr/lib/jvm/java-21-openjdk-amd64/bin/java -Xmx512m -XX:-UseCompressedOops -XX:MaxMetaspaceSize=64m \
+    -Dos.name=Linux -Djdk.lang.Process.launchMechanism=posix_spawn VerifierRunner "${enclave_id}"
 }
 
 # --- main ---
