@@ -235,7 +235,6 @@ public class VerifierRunner {
 
         // Prepare command arguments for the external verifier
         String inputFilePath = null;
-        List<String> cmdArgs = new ArrayList<>();
         List<String> propertyArgs = new ArrayList<>();
 
         File extractionDir = new File(EXTRACTION_DIR);
@@ -294,7 +293,16 @@ public class VerifierRunner {
             } else {
                 System.out.println("Verification completed successfully.");
             }
-        } catch (IOException | InterruptedException e) {
+        } catch (Exception e) {
+            try {
+                List<String> logLines = java.nio.file.Files.readAllLines(logFile.toPath());
+                System.err.println("Verification log:");
+                for (String line : logLines) {
+                    System.err.println(line);
+                }
+            } catch (IOException ioException) {
+                System.err.println("Unable to read log file: " + ioException.getMessage());
+            }
             throw new RuntimeException("Error during verification process: " + e.getMessage(), e);
         }
 
