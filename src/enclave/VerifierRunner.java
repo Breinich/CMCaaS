@@ -261,6 +261,7 @@ public class VerifierRunner {
 
         File logFile = new File(OUTPUT_DIR, "theta-log.txt");
         try {
+            System.out.println("Configured Theta memory: " + System.getenv("THETA_XMX"));
 
             Path thetaScriptPath = Paths.get( "/theta", "theta-start.sh");
             // make the sh script executable
