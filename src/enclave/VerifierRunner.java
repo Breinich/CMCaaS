@@ -236,7 +236,7 @@ public class VerifierRunner {
 
         // Prepare command arguments for the external verifier
         String inputFilePath = null;
-        List<String> propertyArgs = new ArrayList<>();
+        String propertyFilePath = null;
 
         File extractionDir = new File(EXTRACTION_DIR);
         File[] files = extractionDir.listFiles();
@@ -250,8 +250,10 @@ public class VerifierRunner {
                     }
                     inputFilePath = file.getAbsolutePath();
                 } else if (file.getName().endsWith(".prp")) {
-                    propertyArgs.add("--property");
-                    propertyArgs.add(file.getAbsolutePath());
+                    if (propertyFilePath != null) {
+                        throw new IllegalArgumentException("Multiple .prp property files found");
+                    }
+                    propertyFilePath = file.getAbsolutePath();
                 }
             }
         }
@@ -269,23 +271,24 @@ public class VerifierRunner {
         }
 
         try {
-
-            Path thetaScriptPath = Paths.get( "/theta", "theta-start.sh");
-            // make the sh script executable
-            File scriptFile = thetaScriptPath.toFile();
-            boolean result = scriptFile.setExecutable(true);
-            if (!result) {
-                throw new IOException("Failed to make theta-start.sh executable");
-            }
-
-            // Build full command: script + input + properties
+            // Build full command: executable + input + properties
             List<String> command = new ArrayList<>();
-            command.add("bash");
-            command.add(thetaScriptPath.toString());
+            command.add("java");
+            command.add("-Xmx"+(System.getenv("THETA_XMX") != null && !System.getenv("THETA_XMX").isEmpty() ?
+                    System.getenv("THETA_XMX") : "512m"));
+            command.add("-Djdk.lang.Process.launchMechanism=posix_spawn");
+            command.add("-jar");
+            command.add("theta.jar");
+            command.add("--input");
             command.add(inputFilePath);
-            command.addAll(propertyArgs);
+            command.add("--property");
+            command.add(propertyFilePath);
+            command.add("--smt-home");
+            command.add("/theta/solvers");
 
             ProcessBuilder pb = new ProcessBuilder(command);
+            pb.directory(new File("/theta"));
+            pb.environment().put("LD_LIBRARY_PATH", System.getenv("LD_LIBRARY_PATH") + ":/theta/lib");
 
             pb.redirectErrorStream(true);
             pb.redirectOutput(logFile);
