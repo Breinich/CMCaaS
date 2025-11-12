@@ -15,4 +15,4 @@ targets:
   - target: /bin
     copy:
       - files:
-          - /opt/occlum/toolchains/bash/musl/bash
+          - /opt/occlum/toolchains/bash/glibc/bash
