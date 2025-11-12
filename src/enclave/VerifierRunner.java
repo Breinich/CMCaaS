@@ -273,7 +273,7 @@ public class VerifierRunner {
         try {
             // Build full command: executable + input + properties
             List<String> command = new ArrayList<>();
-            command.add("java");
+            command.add("/usr/lib/jvm/java-21-openjdk-amd64/bin/java");
             command.add("-Xss120m");
             command.add("-Xmx"+(System.getenv("THETA_XMX") != null && !System.getenv("THETA_XMX").isEmpty() ?
                     System.getenv("THETA_XMX") : "512m"));
