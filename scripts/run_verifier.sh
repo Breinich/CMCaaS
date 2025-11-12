@@ -39,8 +39,6 @@ init_instance() {
                     .entry_points = ["/usr/lib/jvm/java-21-openjdk-amd64/bin/java"] |
                     .env.default = [
                     "LD_LIBRARY_PATH=/usr/lib/jvm/java-21-openjdk-amd64/lib/server:/usr/lib/jvm/java-21-openjdk-amd64/lib:/lib/x86_64-linux-gnu:/opt/occlum/glibc/lib",
-                    "MALLOC_ARENA_MAX=1",
-                    "OMP_NUM_THREADS=1",
                     "THETA_XMX=128m"
                     ]' Occlum.json)"
     echo "${new_json}" > Occlum.json
