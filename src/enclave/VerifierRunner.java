@@ -272,7 +272,7 @@ public class VerifierRunner {
 
             // Build full command: script + input + properties
             List<String> command = new ArrayList<>();
-            command.add("sh");
+            command.add("bash");
             command.add(thetaScriptPath.toString());
             command.add(inputFilePath);
             command.addAll(propertyArgs);
