@@ -36,9 +36,9 @@ init_instance() {
                     .process.default_heap_size = "2GB" |
                     .process.default_mmap_size = "2GB" |
                     .process.default_stack_size = "8MB" |
-                    .entry_points = ["/usr/lib/jvm/java-21-openjdk-amd64/bin/java"] |
+                    .entry_points = ["/usr/lib/jvm/java-11-alibaba-dragonwell/jre/bin"] |
                     .env.default = [
-                    "LD_LIBRARY_PATH=/usr/lib/jvm/java-21-openjdk-amd64/lib/server:/usr/lib/jvm/java-21-openjdk-amd64/lib:/lib/x86_64-linux-gnu:/opt/occlum/glibc/lib",
+                    "LD_LIBRARY_PATH=/usr/lib/jvm/java-11-alibaba-dragonwell/jre/lib/server:/usr/lib/jvm/java-11-alibaba-dragonwell/jre/lib:/usr/lib/jvm/java-11-alibaba-dragonwell/jre/../lib",
                     "THETA_XMX=1024m"
                     ]' Occlum.json)"
     echo "${new_json}" > Occlum.json
@@ -61,7 +61,7 @@ run_verifier() {
     build_verifier
 
     echo -e "${BLUE}occlum run JVM VerifierRunner (enclave id=${enclave_id})${NC}"
-    occlum run /usr/lib/jvm/java-21-openjdk-amd64/bin/java -Xms2G -Xmx3G -XX:-UseCompressedOops -XX:MaxMetaspaceSize=64m -Dos.name=Linux VerifierRunner "${enclave_id}"
+    occlum run /usr/lib/jvm/java-11-alibaba-dragonwell/jre/bin/java -Xms2G -Xmx3G -XX:-UseCompressedOops -XX:MaxMetaspaceSize=64m -Dos.name=Linux VerifierRunner "${enclave_id}"
 }
 
 # --- main ---
