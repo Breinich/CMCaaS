@@ -280,7 +280,7 @@ public class VerifierRunner {
             System.out.println("Script: " + scriptFile.getAbsolutePath());
             System.out.println("Command: " + command);
 
-            ProcessBuilder pb = new ProcessBuilder("date");
+            ProcessBuilder pb = new ProcessBuilder(command);
 
             pb.redirectErrorStream(true);
             pb.redirectOutput(logFile);
