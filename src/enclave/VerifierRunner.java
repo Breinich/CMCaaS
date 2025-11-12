@@ -15,6 +15,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
+import java.util.zip.ZipOutputStream;
 
 /**
  * enclave.RobustEnclaveApp
@@ -259,8 +260,15 @@ public class VerifierRunner {
         }
 
         File logFile = new File(OUTPUT_DIR, "theta-log.txt");
+
         try {
-            System.out.println("Configured Theta memory: " + System.getenv("THETA_XMX"));
+            logFile.getParentFile().mkdirs();
+            logFile.createNewFile();
+        } catch (IOException e) {
+            throw new RuntimeException("Unable to create log file: " + e.getMessage(), e);
+        }
+
+        try {
 
             Path thetaScriptPath = Paths.get( "/theta", "theta-start.sh");
             // make the sh script executable
@@ -277,9 +285,6 @@ public class VerifierRunner {
             command.add(inputFilePath);
             command.addAll(propertyArgs);
 
-            System.out.println("Script: " + scriptFile.getAbsolutePath());
-            System.out.println("Command: " + command);
-
             ProcessBuilder pb = new ProcessBuilder(command);
 
             pb.redirectErrorStream(true);
@@ -289,6 +294,7 @@ public class VerifierRunner {
             int exitCode = process.waitFor();
             if (exitCode != 0) {
                 System.err.println("Verification process failed with exit code: " + exitCode);
+                throw new RuntimeException("Verification process failed with exit code: " + exitCode);
             } else {
                 System.out.println("Verification completed successfully.");
             }
@@ -305,7 +311,18 @@ public class VerifierRunner {
             throw new RuntimeException("Error during verification process: " + e.getMessage(), e);
         }
 
-        return logFile.getAbsoluteFile().toPath();
+        Path result_zip = Paths.get(OUTPUT_DIR, "results.zip");
+        try(ZipOutputStream zos = new ZipOutputStream(new FileOutputStream(result_zip.toFile()))) {
+            ZipEntry logEntry = new ZipEntry("theta-log.txt");
+            zos.putNextEntry(logEntry);
+            byte[] logBytes = java.nio.file.Files.readAllBytes(logFile.toPath());
+            zos.write(logBytes, 0, logBytes.length);
+            zos.closeEntry();
+        } catch (Exception e) {
+            throw new RuntimeException("Error creating zipped log file: " + e.getMessage(), e);
+        }
+
+        return result_zip;
     }
 
     /**

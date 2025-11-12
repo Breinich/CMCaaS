@@ -36,7 +36,8 @@ init_instance() {
                     .process.default_heap_size = "256MB" |
                     .entry_points = ["/usr/lib/jvm/java-21-openjdk-amd64/bin/java"] |
                     .env.default = [
-                    "LD_LIBRARY_PATH=/usr/lib/jvm/java-21-openjdk-amd64/lib/server:/usr/lib/jvm/java-21-openjdk-amd64/lib:/lib/x86_64-linux-gnu:/opt/occlum/glibc/lib"
+                    "LD_LIBRARY_PATH=/usr/lib/jvm/java-21-openjdk-amd64/lib/server:/usr/lib/jvm/java-21-openjdk-amd64/lib:/lib/x86_64-linux-gnu:/opt/occlum/glibc/lib",
+                    "THETA_XMX=1024m"
                     ]' Occlum.json)"
     echo "${new_json}" > Occlum.json
 }

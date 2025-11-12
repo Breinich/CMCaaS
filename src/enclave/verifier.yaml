@@ -16,3 +16,4 @@ targets:
     copy:
       - files:
           - /opt/occlum/toolchains/bash/glibc/bash
+          - /usr/bin/python3
