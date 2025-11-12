@@ -8,7 +8,7 @@ IN=$1
 DEFAULT_XMX="14210m"
 FALLBACK_XMX="512m"
 # If total system memory is below this threshold (KB), use fallback Xmx
-MEM_THRESHOLD_KB=$((12*1024*1024)) # 12 GB
+MEM_THRESHOLD_KB=$((16*1024*1024)) # 16 GB
 
 # Determine Xmx
 if [ -n "${THETA_XMX}" ]; then
@@ -29,7 +29,7 @@ export VERIFIER_NAME=Theta
 export VERIFIER_VERSION=6.8.6
 
 if [ "$1" == "--version" ]; then
-    LD_LIBRARY_PATH=$scriptdir/lib java -Xss120m -Xmx${XMX} -jar "$scriptdir"/theta.jar --version || echo $VERIFIER_VERSION
+    LD_LIBRARY_PATH=$scriptdir/lib java -Xmx"${XMX}" -jar "$scriptdir"/theta.jar --version || echo $VERIFIER_VERSION
     exit
 fi
 
@@ -66,7 +66,7 @@ echo "Verifying input '$IN' with property '$property' using arguments '$modified
 if [ "$(basename "$property")" == "termination.prp" ]; then
     transformed_property=$(dirname "$property")/unreach-call.prp
     echo "Mapping property '$property' to '$transformed_property'"
-    TMPFILE=$(mktemp -p $PWD)
+    TMPFILE=$(mktemp -p "$PWD")
     sed 's/__VERIFIER_assert/__OLD_VERIFIER_assert/g;s/reach_error/old_reach_error/g' "$IN" > "$TMPFILE"
     python3 "$scriptdir"/specification-transformation/src/specification-transformation.py --from-property termination --to-property reachability --algorithm InstrumentationOperator "$TMPFILE"
     #"$scriptdir"/offset.sh "$IN" "output/transformed_program.c" > witness-mapping.yml
@@ -76,7 +76,7 @@ if [ "$(basename "$property")" == "termination.prp" ]; then
 elif [ "$(basename "$property")" == "no-overflow.prp" ]; then
     transformed_property=$(dirname "$property")/unreach-call.prp
     echo "Mapping property '$property' to '$transformed_property'"
-    TMPFILE=$(mktemp -p $PWD)
+    TMPFILE=$(mktemp -p "$PWD")
     sed 's/__VERIFIER_assert/__OLD_VERIFIER_assert/g;s/reach_error/old_reach_error/g' "$IN" > "$TMPFILE"
     python3 "$scriptdir"/specification-transformation/src/specification-transformation.py --from-property no-overflow --to-property reachability --algorithm InstrumentationOperator "$TMPFILE"
     #"$scriptdir"/offset.sh "$IN" "output/transformed_program.c" > witness-mapping.yml
@@ -88,8 +88,8 @@ else
 fi
 
 echo "Using Java heap -Xmx=${XMX} (${XMX_REASON})"
-echo LD_LIBRARY_PATH="$scriptdir"/lib java -Xss120m -Xmx${XMX} -jar "$scriptdir"/theta.jar $modified_args --input "$IN" --property "$transformed_property" --smt-home "$scriptdir"/solvers
-LD_LIBRARY_PATH="$scriptdir"/lib java -Xss120m -Xmx${XMX} -jar "$scriptdir"/theta.jar $modified_args --input "$IN" --property "$transformed_property" --smt-home "$scriptdir"/solvers
+echo LD_LIBRARY_PATH="$scriptdir"/lib java -Xmx"${XMX}" -jar "$scriptdir"/theta.jar "$modified_args" --input "$IN" --property "$transformed_property" --smt-home "$scriptdir"/solvers
+LD_LIBRARY_PATH="$scriptdir"/lib java -Xmx"${XMX}" -jar "$scriptdir"/theta.jar "$modified_args" --input "$IN" --property "$transformed_property" --smt-home "$scriptdir"/solvers
 
 if [ "$(basename "$property")" == "termination.prp" ]; then
     echo "Not yet mapping witnesses from '$transformed_property' to '$property', hoping for the best"
