@@ -261,9 +261,6 @@ public class VerifierRunner {
 
         File logFile = new File(OUTPUT_DIR, "theta-log.txt");
         try {
-            // print the available memory
-            long maxMemory = Runtime.getRuntime().maxMemory() / (1024 * 1024);
-            System.out.println("Max memory (MB): " + maxMemory);
 
             Path thetaScriptPath = Paths.get( "/theta", "theta-start.sh");
             // make the sh script executable
@@ -284,7 +281,7 @@ public class VerifierRunner {
             System.out.println("Command: " + command);
 
             ProcessBuilder pb = new ProcessBuilder(command);
-            pb.environment().put("THETA_XMX", "256m");
+            //pb.environment().put("THETA_XMX", "256m");
 
             pb.redirectErrorStream(true);
             pb.redirectOutput(logFile);
