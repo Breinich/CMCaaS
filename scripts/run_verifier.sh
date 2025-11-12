@@ -61,7 +61,7 @@ run_verifier() {
     build_verifier
 
     echo -e "${BLUE}occlum run JVM VerifierRunner (enclave id=${enclave_id})${NC}"
-    occlum run /usr/lib/jvm/java-21-openjdk-amd64/bin/java -Xms2G -Xmx3G -XX:-UseCompressedOops -XX:MaxMetaspaceSize=64m -Dos.name=Linux VerifierRunner "${enclave_id}"
+    occlum run /bin/bash
 }
 
 # --- main ---
