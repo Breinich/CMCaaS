@@ -261,6 +261,10 @@ public class VerifierRunner {
 
         File logFile = new File(OUTPUT_DIR, "theta-log.txt");
         try {
+            // print the available memory
+            long maxMemory = Runtime.getRuntime().maxMemory() / (1024 * 1024);
+            System.out.println("Max memory (MB): " + maxMemory);
+
             Path thetaScriptPath = Paths.get( "/theta", "theta-start.sh");
             // make the sh script executable
             File scriptFile = thetaScriptPath.toFile();
