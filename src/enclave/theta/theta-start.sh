@@ -4,11 +4,32 @@ set -e
 scriptdir=$(dirname "$(realpath "$0")")
 IN=$1
 
+# Configurable heap: set THETA_XMX environment variable to override.
+DEFAULT_XMX="14210m"
+FALLBACK_XMX="512m"
+# If total system memory is below this threshold (KB), use fallback Xmx
+MEM_THRESHOLD_KB=$((12*1024*1024)) # 12 GB
+
+# Determine Xmx
+if [ -n "${THETA_XMX}" ]; then
+    XMX="${THETA_XMX}"
+    XMX_REASON="env THETA_XMX"
+else
+    mem_kb=$(awk '/MemTotal/ {print $2}' /proc/meminfo 2>/dev/null || echo 0)
+    if [ "${mem_kb}" -gt 0 ] && [ "${mem_kb}" -lt "${MEM_THRESHOLD_KB}" ]; then
+        XMX="${FALLBACK_XMX}"
+        XMX_REASON="low-memory detected (${mem_kb} KB)"
+    else
+        XMX="${DEFAULT_XMX}"
+        XMX_REASON="default"
+    fi
+fi
+
 export VERIFIER_NAME=Theta
 export VERIFIER_VERSION=6.8.6
 
 if [ "$1" == "--version" ]; then
-    LD_LIBRARY_PATH=$scriptdir/lib java -Xss120m -Xmx14210m -jar "$scriptdir"/theta.jar --version || echo $VERIFIER_VERSION
+    LD_LIBRARY_PATH=$scriptdir/lib java -Xss120m -Xmx${XMX} -jar "$scriptdir"/theta.jar --version || echo $VERIFIER_VERSION
     exit
 fi
 
@@ -66,8 +87,9 @@ else
     transformed_property="$property"
 fi
 
-echo LD_LIBRARY_PATH="$scriptdir"/lib java -Xss120m -Xmx14210m -jar "$scriptdir"/theta.jar $modified_args --input "$IN" --property "$transformed_property" --smt-home "$scriptdir"/solvers
-LD_LIBRARY_PATH="$scriptdir"/lib java -Xss120m -Xmx14210m -jar "$scriptdir"/theta.jar $modified_args --input "$IN" --property "$transformed_property" --smt-home "$scriptdir"/solvers
+echo "Using Java heap -Xmx=${XMX} (${XMX_REASON})"
+echo LD_LIBRARY_PATH="$scriptdir"/lib java -Xss120m -Xmx${XMX} -jar "$scriptdir"/theta.jar $modified_args --input "$IN" --property "$transformed_property" --smt-home "$scriptdir"/solvers
+LD_LIBRARY_PATH="$scriptdir"/lib java -Xss120m -Xmx${XMX} -jar "$scriptdir"/theta.jar $modified_args --input "$IN" --property "$transformed_property" --smt-home "$scriptdir"/solvers
 
 if [ "$(basename "$property")" == "termination.prp" ]; then
     echo "Not yet mapping witnesses from '$transformed_property' to '$property', hoping for the best"
