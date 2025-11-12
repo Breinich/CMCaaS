@@ -30,13 +30,14 @@ public class DataBaseService {
      * @param processKey public key of the process
      */
     @Transactional
-    public void addProcess(String username, int port, String processKey) {
+    public void addProcess(String username, int port, String processKey, Long pid) {
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new UsernameNotFoundException("User not found"));
         Process process = new Process();
         process.setPort(port);
         process.setKey(processKey);
         process.setStatus(ProcessStatus.CREATED);
+        process.setPid(pid);
         user.addProcess(process);
         processRepository.save(process);
     }
@@ -134,5 +135,13 @@ public class DataBaseService {
         Process process = processRepository.findByKeyAndUser_Id(processKey, user.getId())
                 .orElse(null);
         return process != null;
+    }
+
+    public long getProcessPid(String username, String processKey) {
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+        Process process = processRepository.findByKeyAndUser_Id(processKey, user.getId())
+                .orElseThrow(() -> new IllegalArgumentException("Invalid process key"));
+        return process.getPid();
     }
 }

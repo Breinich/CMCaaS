@@ -23,6 +23,9 @@ public class Process {
     @Column(nullable = false)
     private ProcessStatus status;
 
+    @Column(nullable = false)
+    private Long pid;
+
     @ManyToOne
     @JoinColumn(name = "user_id", referencedColumnName = "id", nullable = false)
     private User user;
