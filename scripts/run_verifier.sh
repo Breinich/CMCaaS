@@ -33,9 +33,16 @@ init_instance() {
                     .resource_limits.kernel_space_heap_size = "2MB" |
                     .resource_limits.kernel_space_heap_max_size = "64MB" |
                     .resource_limits.max_num_of_threads = 64 |
-                    .process.default_heap_size = "2GB" |
+                    .process.default_heap_size = "4GB" |
+                    .process.default_mmap_size = "4GB" |
+                    .process.default_stack_size = "8MB" |
                     .entry_points = ["/usr/lib/jvm/java-21-openjdk-amd64/bin/java"] |
-                    .env.default = ["LD_LIBRARY_PATH=/usr/lib/jvm/java-21-openjdk-amd64/lib/server:/usr/lib/jvm/java-21-openjdk-amd64/lib:/lib/x86_64-linux-gnu:/opt/occlum/glibc/lib"]' Occlum.json)"
+                    .env.default = [
+                    "LD_LIBRARY_PATH=/usr/lib/jvm/java-21-openjdk-amd64/lib/server:/usr/lib/jvm/java-21-openjdk-amd64/lib:/lib/x86_64-linux-gnu:/opt/occlum/glibc/lib",
+                    "MALLOC_ARENA_MAX=1",
+                    "OMP_NUM_THREADS=1",
+                    "THETA_XMX=256m"
+                    ]' Occlum.json)"
     echo "${new_json}" > Occlum.json
 }
 
