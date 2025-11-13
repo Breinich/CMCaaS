@@ -1,7 +1,6 @@
 import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.security.*;
@@ -14,9 +13,7 @@ import java.io.*;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
-import java.util.jar.JarFile;
 import java.util.zip.ZipEntry;
-import java.util.zip.ZipException;
 import java.util.zip.ZipInputStream;
 import java.util.zip.ZipOutputStream;
 
@@ -193,52 +190,12 @@ public class VerifierRunner {
         return filename.replaceAll("[^a-zA-Z0-9._-]", "_");
     }
 
-    private void checkJarDiagnostics(Path jarPath) throws Exception {
-        // write diagnostics header
-        String header = "=== JAR DIAGNOSTICS ===";
-        System.err.println(header);
-
-        if (!Files.exists(jarPath)) {
-            String msg = "Jar not found: " + jarPath;
-            System.err.println(msg);
-            throw new RuntimeException(msg);
-        }
-
-        // compute sha-256
-        byte[] jarBytes = Files.readAllBytes(jarPath);
-        MessageDigest md = MessageDigest.getInstance("SHA-256");
-        byte[] digest = md.digest(jarBytes);
-        StringBuilder sb = new StringBuilder();
-        for (byte b : digest) sb.append(String.format("%02x", b));
-        String sha256 = sb.toString();
-        String sizeMsg = "Jar size: " + jarBytes.length + " bytes";
-        String hashMsg = "Jar SHA-256: " + sha256;
-        System.err.println(sizeMsg);
-        System.err.println(hashMsg);
-
-        // attempt to open as JarFile to detect Zip/Format problems
-        try (JarFile jf = new JarFile(jarPath.toFile(), true)) {
-            String ok = "Jar can be opened as JarFile (basic validity check OK)";
-            System.err.println(ok);
-        } catch (ZipException ze) {
-            String err = "Jar appears corrupted (ZipException): " + ze.getMessage();
-            System.err.println(err);
-            throw new RuntimeException(err, ze);
-        } catch (IOException ioe) {
-            String err = "Error opening jar: " + ioe.getMessage();
-            System.err.println(err);
-            throw new RuntimeException(err, ioe);
-        }
-
-        System.err.println("=== END JAR DIAGNOSTICS ===");
-    }
-
     /**
      * Unzip the file and run the model checking
      * @param filename file name
      * @return output file path (txt)
      */
-    private Path processFile(String filename) throws Exception {
+    private Path processFile(String filename) {
         System.out.println("Processing file: " + filename);
 
         // Ensure extraction and output directories exist
@@ -313,8 +270,6 @@ public class VerifierRunner {
             throw new RuntimeException("Unable to create log file: " + e.getMessage(), e);
         }
 
-        checkJarDiagnostics(Paths.get("/theta/theta.jar"));
-
         try {
             // Build full command: executable + input + properties
             List<String> command = new ArrayList<>();
@@ -322,9 +277,6 @@ public class VerifierRunner {
             command.add("-Xss120m");
             command.add("-Xmx"+(System.getenv("THETA_XMX") != null && !System.getenv("THETA_XMX").isEmpty() ?
                     System.getenv("THETA_XMX") : "512m"));
-            command.add("-Xverify:all");
-            command.add("-verbose:class");
-            command.add("-Xlog:class+load=info");
             command.add("-Djdk.lang.Process.launchMechanism=posix_spawn");
             command.add("-jar");
             command.add("/theta/theta.jar");
