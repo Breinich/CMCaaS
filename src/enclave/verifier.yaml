@@ -12,3 +12,8 @@ targets:
     copy:
       - dirs:
           - /usr/lib/jvm/java-21-openjdk-amd64
+  - target: /bin
+    copy:
+      - files:
+          - /opt/occlum/toolchains/bash/glibc/bash
+          - /usr/bin/python3

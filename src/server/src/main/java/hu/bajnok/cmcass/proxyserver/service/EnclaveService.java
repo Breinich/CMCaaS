@@ -76,7 +76,7 @@ public class EnclaveService {
             });
 
             int attempts = 0;
-            final int maxAttempts = 240; // max 120 seconds if sleep=500ms
+            final int maxAttempts = 300; // max 300 seconds
             boolean started = false;
 
             while(attempts < maxAttempts){
@@ -94,7 +94,7 @@ public class EnclaveService {
                 }
                 catch (IOException e){
                     try {
-                        Thread.sleep(500);
+                        Thread.sleep(1000);
                         attempts++;
                     } catch (InterruptedException ie) {
                         ie.printStackTrace();
@@ -109,7 +109,9 @@ public class EnclaveService {
 
             // leave the process running and save its port number for later use
 
-            dbService.addProcess(username, new_id, enclavePublicKey_b64);
+            dbService.addProcess(username, new_id, enclavePublicKey_b64, process.pid());
+            logger.info("Enclave process registered in database for user {} with ID: {}", username, new_id);
+
             executor.submit(() -> {
                 try {
                     int exitCode = process.waitFor();
@@ -179,7 +181,7 @@ public class EnclaveService {
         catch (IOException e) {
             // if communication fails, assume the enclave process is down, clean up the database
             dbService.stopProcess(username, processKey);
-            throw new IllegalStateException("Enclave process is not running");
+            throw new IllegalStateException("Enclave process is not running or failed to start the verification.");
         }
     }
 
@@ -222,7 +224,9 @@ public class EnclaveService {
      */
     public void stop_enclave(String username, String processKey) {
         int processId;
+        long pid;
         try {
+            pid = dbService.getProcessPid(username, processKey);
             processId = dbService.getProcessPort(username, processKey);
         }
         catch (IllegalArgumentException e) {
@@ -237,7 +241,14 @@ public class EnclaveService {
         }
         catch (IOException ignored) {}
         finally {
-            dbService.stopProcess(username, processKey);
+            try {
+                ProcessHandle.of(pid).ifPresent(ProcessHandle::destroy);
+                dbService.stopProcess(username, processKey);
+                logger.info("Enclave process with PID {} terminated.", pid);
+
+            } catch (Exception e) {
+                logger.error("Failed to terminate enclave process with PID {}: {}", pid, e.getMessage());
+            }
         }
     }
 

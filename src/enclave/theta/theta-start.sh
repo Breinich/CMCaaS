@@ -8,7 +8,7 @@ export VERIFIER_NAME=Theta
 export VERIFIER_VERSION=6.8.6
 
 if [ "$1" == "--version" ]; then
-    LD_LIBRARY_PATH=$scriptdir/lib java -Xss120m -Xmx14210m -jar "$scriptdir"/theta.jar --version || echo $VERIFIER_VERSION
+    LD_LIBRARY_PATH=$scriptdir/lib java -Xss120m -Xmx512m -jar "$scriptdir"/theta.jar --version || echo $VERIFIER_VERSION
     exit
 fi
 
@@ -66,8 +66,8 @@ else
     transformed_property="$property"
 fi
 
-echo LD_LIBRARY_PATH="$scriptdir"/lib java -Xss120m -Xmx14210m -jar "$scriptdir"/theta.jar $modified_args --input "$IN" --property "$transformed_property" --smt-home "$scriptdir"/solvers
-LD_LIBRARY_PATH="$scriptdir"/lib java -Xss120m -Xmx14210m -jar "$scriptdir"/theta.jar $modified_args --input "$IN" --property "$transformed_property" --smt-home "$scriptdir"/solvers
+echo LD_LIBRARY_PATH="$scriptdir"/lib java -Xss120m -Xmx512m -jar "$scriptdir"/theta.jar $modified_args --input "$IN" --property "$transformed_property" --smt-home "$scriptdir"/solvers
+LD_LIBRARY_PATH="$scriptdir"/lib java -Xss120m -Xmx512m -jar "$scriptdir"/theta.jar $modified_args --input "$IN" --property "$transformed_property" --smt-home "$scriptdir"/solvers
 
 if [ "$(basename "$property")" == "termination.prp" ]; then
     echo "Not yet mapping witnesses from '$transformed_property' to '$property', hoping for the best"
