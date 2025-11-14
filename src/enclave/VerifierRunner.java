@@ -274,23 +274,23 @@ public class VerifierRunner {
             // Build full command: executable + input + properties
             List<String> command = new ArrayList<>();
             command.add("/usr/lib/jvm/java-21-openjdk-amd64/bin/java");
-            command.add("-Xss120m");
+            command.add("-Xss1m");
             command.add("-Xmx"+(System.getenv("THETA_XMX") != null && !System.getenv("THETA_XMX").isEmpty() ?
-                    System.getenv("THETA_XMX") : "2048m"));
+                    System.getenv("THETA_XMX") : "512m"));
             command.add("-Djdk.lang.Process.launchMechanism=posix_spawn");
             command.add("-XX:-UseCompressedOops");
             command.add("-XX:MaxMetaspaceSize=64m");
             command.add("-Dos.name=Linux");
             command.add("-jar");
             command.add("/theta/theta.jar");
+//            command.add("--in-process");
+//            command.add("--enable-few");
             command.add("--input");
             command.add(inputFilePath);
             command.add("--property");
             command.add(propertyFilePath);
             command.add("--smt-home");
             command.add("/theta/solvers");
-            command.add("--in-process");
-            command.add("--enable-few");
 
             ProcessBuilder pb = new ProcessBuilder(command);
             pb.directory(new File("/theta"));
