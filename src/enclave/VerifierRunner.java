@@ -278,6 +278,9 @@ public class VerifierRunner {
             command.add("-Xmx"+(System.getenv("THETA_XMX") != null && !System.getenv("THETA_XMX").isEmpty() ?
                     System.getenv("THETA_XMX") : "2048m"));
             command.add("-Djdk.lang.Process.launchMechanism=posix_spawn");
+            command.add("-XX:-UseCompressedOops");
+            command.add("-XX:MaxMetaspaceSize=64m");
+            command.add("-Dos.name=Linux");
             command.add("-jar");
             command.add("/theta/theta.jar");
             command.add("--input");
