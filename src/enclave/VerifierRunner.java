@@ -283,8 +283,6 @@ public class VerifierRunner {
             command.add("-Dos.name=Linux");
             command.add("-jar");
             command.add("/theta/theta.jar");
-//            command.add("--in-process");
-//            command.add("--enable-few");
             command.add("--input");
             command.add(inputFilePath);
             command.add("--property");
