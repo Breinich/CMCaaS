@@ -276,7 +276,7 @@ public class VerifierRunner {
             command.add("/usr/lib/jvm/java-21-openjdk-amd64/bin/java");
             command.add("-Xss120m");
             command.add("-Xmx"+(System.getenv("THETA_XMX") != null && !System.getenv("THETA_XMX").isEmpty() ?
-                    System.getenv("THETA_XMX") : "512m"));
+                    System.getenv("THETA_XMX") : "2048m"));
             command.add("-Djdk.lang.Process.launchMechanism=posix_spawn");
             command.add("-jar");
             command.add("/theta/theta.jar");
@@ -286,6 +286,8 @@ public class VerifierRunner {
             command.add(propertyFilePath);
             command.add("--smt-home");
             command.add("/theta/solvers");
+//            command.add("--in-process");
+//            command.add("--enable-few");
 
             ProcessBuilder pb = new ProcessBuilder(command);
             pb.directory(new File("/theta"));

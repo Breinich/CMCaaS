@@ -37,7 +37,6 @@ init_instance() {
                     .entry_points = ["/usr/lib/jvm/java-21-openjdk-amd64/bin/java"] |
                     .env.default = [
                     "LD_LIBRARY_PATH=/usr/lib/jvm/java-21-openjdk-amd64/lib/server:/usr/lib/jvm/java-21-openjdk-amd64/lib:/lib/x86_64-linux-gnu:/opt/occlum/glibc/lib",
-                    "THETA_XMX=1024m",
                     "JAVA_HOME=/usr/lib/jvm/java-21-openjdk-amd64",
                     "PATH=/usr/lib/jvm/java-21-openjdk-amd64/bin:/bin:/usr/bin:/usr/local/bin"
                     ]' Occlum.json)"
