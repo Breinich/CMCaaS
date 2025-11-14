@@ -286,8 +286,8 @@ public class VerifierRunner {
             command.add(propertyFilePath);
             command.add("--smt-home");
             command.add("/theta/solvers");
-//            command.add("--in-process");
-//            command.add("--enable-few");
+            command.add("--in-process");
+            command.add("--enable-few");
 
             ProcessBuilder pb = new ProcessBuilder(command);
             pb.directory(new File("/theta"));
