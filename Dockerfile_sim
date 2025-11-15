@@ -28,6 +28,7 @@ RUN cd src/server && mvn clean package
 
 COPY src/enclave /app/src/enclave/
 COPY src/client /app/src/client/
+COPY data /app/data/
 COPY scripts /app/scripts/
 
 RUN chmod +x /app/scripts/*

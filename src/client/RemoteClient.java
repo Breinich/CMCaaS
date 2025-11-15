@@ -305,7 +305,7 @@ public class RemoteClient {
         String port = "8080";
         String userName = "test";
         String password = "test";
-        String filename = "test.zip";
+        String filename = "../../data/test.zip";
 
         Console cnsl = System.console();
 
