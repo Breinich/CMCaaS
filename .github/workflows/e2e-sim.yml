@@ -53,7 +53,7 @@ jobs:
           trap 'kill $LOG_PID 2>/dev/null || true' EXIT
         
           # run the client with timeout and prefix its output
-          timeout "$TIMEOUT" docker exec --user root cmcaas bash -lc "cd /app/src/client && java RemoteClient" 2>&1 | sed 's/^/[client] /'
+          timeout "$TIMEOUT" docker exec --user root cmcaas bash -lc "cd /app/src/client && java RemoteClient && unzip dec_enc_response_test.zip && cat theta-log.txt" 2>&1 | sed 's/^/[client] /'
           TEST_EXIT=${PIPESTATUS[0]}
         
           if [ $TEST_EXIT -eq 124 ]; then
@@ -62,7 +62,6 @@ jobs:
         
           # stop the background log follower and show a final snapshot
           kill $LOG_PID 2>/dev/null || true
-          docker logs cmcaas --tail 200 || true
         
           docker stop cmcaas || true
           docker rm cmcaas || true
