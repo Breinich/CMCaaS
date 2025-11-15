@@ -30,7 +30,8 @@ public class SecurityConfig {
                     .authenticated()
                     .anyRequest()
                     .permitAll())
-        .httpBasic(withDefaults());
+        .httpBasic(withDefaults())
+        .csrf(org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer::disable);
 
     return http.build();
   }
