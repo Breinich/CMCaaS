@@ -20,6 +20,7 @@ COPY scripts/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 RUN cd src/server && mvn clean package
 
 COPY src/enclave /app/src/enclave/
+COPY src/client /app/src/client/
 COPY scripts /app/scripts/
 
 RUN chmod +x /app/scripts/*
