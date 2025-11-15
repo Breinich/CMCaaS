@@ -1,3 +1,3 @@
 public interface AllSatModelCallback {
-    public int callback(long[] model);
+  public int callback(long[] model);
 }

@@ -1,3 +1,3 @@
 public interface TerminationTest {
-    public int callback();
+  public int callback();
 }

@@ -1,3 +1,3 @@
 public interface VisitTermCallback {
-    public int callback(long env, long term, boolean preorder);
+  public int callback(long env, long term, boolean preorder);
 }
