@@ -17,14 +17,12 @@ import java.util.zip.ZipOutputStream;
 import javax.crypto.*;
 import javax.crypto.spec.*;
 
-/** enclave.RobustEnclaveApp */
+// Validates that the Xmx string is a safe memory limit format: digits + optional unit (m/g)
+private static boolean isValidXmx(String value) {
+  if (value == null) return true;
+  return value.matches("(?i)^\\d{1,7}[mg]$");
+}
 
-  // Validates that the Xmx string is a safe memory limit format: digits + optional unit (m/g)
-  private static boolean isValidXmx(String value) {
-    if (value == null) return false;
-    // accept values like "512m", "2g", "4096M", "4G" (case-insensitive)
-    return value.matches("(?i)^\\d{1,5}[mg]$");
-  }
 public class VerifierRunner {
   private static final String SHARED_DIR = "/host";
   private static final String EXTRACTION_DIR = "/tmp/extracted";
