@@ -39,16 +39,33 @@ jobs:
 
       - name: Run E2E test harness
         run: |
-          TIMEOUT=20m
-          timeout "$TIMEOUT" docker exec --user root cmcaas bash -lc "cd /app/src/client && java RemoteClient"
-          TEST_EXIT=$?
+          set -o pipefail
+          TIMEOUT=5m
+        
+          # follow server logs in background with prefix
+          docker logs -f cmcaas 2>&1 | sed 's/^/[server] /' &
+          LOG_PID=$!
+        
+          # ensure follower is killed on any exit
+          trap 'kill $LOG_PID 2>/dev/null || true' EXIT
+        
+          # run the client with timeout and prefix its output
+          timeout "$TIMEOUT" docker exec --user root cmcaas bash -lc "cd /app/src/client && java RemoteClient" 2>&1 | sed 's/^/[client] /'
+          TEST_EXIT=${PIPESTATUS[0]}
+        
           if [ $TEST_EXIT -eq 124 ]; then
-          echo "E2E test timed out after $TIMEOUT" >&2
+            echo "E2E test timed out after $TIMEOUT" >&2
           fi
+        
+          # stop the background log follower and show a final snapshot
+          kill $LOG_PID 2>/dev/null || true
           docker logs cmcaas --tail 200 || true
+        
           docker stop cmcaas || true
           docker rm cmcaas || true
+        
           if [ $TEST_EXIT -ne 0 ]; then
-          echo 'E2E test failed' >&2
-          exit $TEST_EXIT
+            echo 'E2E test failed' >&2
+            exit $TEST_EXIT
           fi
+
