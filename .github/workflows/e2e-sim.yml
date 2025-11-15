@@ -19,7 +19,7 @@ jobs:
 
       - name: Run container (Occlum + server) in SGX simulation
         run: |
-          docker run -d -p 8080:8080 --name cmcaas "$IMAGE_NAME:sim"
+          docker run -d -p 8080:8080 --name cmcaas cmcaas-server:sim
 
       - name: Wait for server to be ready
         run: |
