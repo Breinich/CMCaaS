@@ -20,7 +20,7 @@ jobs:
         id: set-image
         run: |
           IMAGE="${{ github.repository }}-server"
-          echo "image_name=$(echo \"$IMAGE\" | tr '[:upper:]' '[:lower:]')" >> $GITHUB_OUTPUT
+          echo "image_name=$(echo $IMAGE | tr '[:upper:]' '[:lower:]')" >> $GITHUB_OUTPUT
 
       - name: Install cosign
         if: github.event_name != 'pull_request'
