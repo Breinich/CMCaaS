@@ -31,7 +31,9 @@ public class SecurityConfig {
                     .anyRequest()
                     .permitAll())
         .httpBasic(withDefaults())
-        .csrf(org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer::disable);
+        .csrf(
+            org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer
+                ::disable);
 
     return http.build();
   }
