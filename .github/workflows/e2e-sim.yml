@@ -1,0 +1,73 @@
+name: E2E (SGX simulation)
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  e2e-sim:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          lfs: true
+          fetch-depth: 0
+
+      - name: Build simulation Docker image
+        run: |
+          docker build -f Dockerfile_sim -t cmcaas-server:sim .
+
+      - name: Run container (Occlum + server) in SGX simulation
+        run: |
+          docker run -d -p 8080:8080 --name cmcaas cmcaas-server:sim
+
+      - name: Wait for server to be ready
+        run: |
+          for i in {1..30}; do
+            if curl -sS http://localhost:8080/actuator/health >/dev/null 2>&1; then
+              echo "server ready"
+              exit 0
+            fi
+            echo "waiting for server..."
+            sleep 2
+          done
+          docker logs cmcaas --tail 200 || true
+          echo "server did not start" >&2
+          docker stop cmcaas || true
+          docker rm cmcaas || true
+          exit 1
+
+      - name: Run E2E test harness
+        run: |
+          set -o pipefail
+          TIMEOUT=5m
+        
+          # follow server logs in background with prefix
+          docker logs -f cmcaas 2>&1 | sed 's/^/[server] /' &
+          LOG_PID=$!
+        
+          # ensure follower is killed on any exit
+          trap 'kill $LOG_PID 2>/dev/null || true' EXIT
+        
+          # run the client with timeout and prefix its output
+          timeout "$TIMEOUT" docker exec --user root cmcaas bash -lc "cd /app/src/client && java RemoteClient && unzip dec_enc_response_test.zip && cat theta-log.txt" 2>&1 | sed 's/^/[client] /'
+          TEST_EXIT=${PIPESTATUS[0]}
+        
+          if [ $TEST_EXIT -eq 124 ]; then
+            echo "E2E test timed out after $TIMEOUT" >&2
+          fi
+        
+          # stop the background log follower and show a final snapshot
+          kill $LOG_PID 2>/dev/null || true
+        
+          docker stop cmcaas || true
+          docker rm cmcaas || true
+        
+          if [ $TEST_EXIT -ne 0 ]; then
+            echo 'E2E test failed' >&2
+            exit $TEST_EXIT
+          fi
+

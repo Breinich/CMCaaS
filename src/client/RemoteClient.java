@@ -344,30 +344,45 @@ public class RemoteClient {
 
   public static void main(String[] args) {
 
+    String host = "localhost";
+    String port = "8080";
+    String userName = "test";
+    String password = "test";
+    String filename = "../../data/test.zip";
+
     Console cnsl = System.console();
 
     if (cnsl == null) {
       System.out.println("No console available");
-      return;
-    }
 
-    String host = cnsl.readLine("Enter service host (default: localhost): ");
-    if (host == null || host.isEmpty()) {
-      host = "localhost";
-    }
-    String port = cnsl.readLine("Enter service port (default: 8080): ");
-    if (port == null || port.isEmpty()) {
-      port = "8080";
-    }
-    String userName = cnsl.readLine("Enter username (default: test): ");
-    if (userName == null || userName.isEmpty()) {
-      userName = "test";
-    }
+      System.out.println("Using default parameters: ");
+      System.out.println("Host: " + host);
+      System.out.println("Port: " + port);
+      System.out.println("Username: " + userName);
+      System.out.println("Filename: " + filename);
+    } else {
+      String hostInput = cnsl.readLine("Enter service host (default: localhost): ");
+      if (hostInput != null && !hostInput.isEmpty()) {
+        host = hostInput;
+      }
+      String portInput = cnsl.readLine("Enter service port (default: 8080): ");
+      if (portInput != null && !portInput.isEmpty()) {
+        port = portInput;
+      }
+      String userNameInput = cnsl.readLine("Enter username (default: test): ");
+      if (userNameInput != null && !userNameInput.isEmpty()) {
+        userName = userNameInput;
+      }
 
-    String password = new String(cnsl.readPassword("Enter password: "));
-    String filename = cnsl.readLine("Enter filename to process (default: test.zip): ");
-    if (filename == null || filename.isEmpty()) {
-      filename = "test.zip";
+      String passwordInput = new String(cnsl.readPassword("Enter password: "));
+      if (!passwordInput.isEmpty()) {
+        password = passwordInput;
+      }
+
+      String filenameInput = cnsl.readLine("Enter filename to process (default: test.zip): ");
+      if (filenameInput != null && !filenameInput.isEmpty()) {
+        filename = filenameInput;
+      }
     }
 
     RemoteClient client = new RemoteClient();
