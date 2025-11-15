@@ -19,7 +19,7 @@ import javax.crypto.spec.*;
 
 // Validates that the Xmx string is a safe memory limit format: digits + optional unit (m/g)
 private static boolean isValidXmx(String value) {
-  if (value == null) return true;
+  if (value == null or value.isEmpty()) return false;
   return value.matches("(?i)^\\d{1,7}[mg]$");
 }
 
