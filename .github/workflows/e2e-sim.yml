@@ -1,0 +1,62 @@
+name: E2E (SGX simulation)
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  e2e-sim:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Build simulation Docker image
+        run: |
+          docker build -f Dockerfile_sim -t cmcaas-server:sim .
+
+      - name: Run container (Occlum + server) in SGX simulation
+        run: |
+          docker run -d -p 8080:8080 --name cmcaas "$IMAGE_NAME:sim"
+
+      - name: Wait for server to be ready
+        run: |
+          for i in {1..30}; do
+            if curl -sS http://localhost:8080/actuator/health >/dev/null 2>&1; then
+              echo "server ready"
+              exit 0
+            fi
+            echo "waiting for server..."
+            sleep 2
+          done
+          docker logs cmcaas --tail 200 || true
+          echo "server did not start" >&2
+          docker stop cmcaas || true
+          docker rm cmcaas || true
+          exit 1
+
+      - name: Copy test payload into container
+        run: |
+          if [ -f data/test.zip ]; then
+            docker cp data/test.zip cmcaas:/app/test.zip
+          else
+            echo "Missing test.zip in repo root" >&2
+            docker logs cmcaas --tail 200 || true
+            docker stop cmcaas || true
+            docker rm cmcaas || true
+            exit 1
+          fi
+
+      - name: Run E2E test harness
+        run: |
+          docker exec --user root cmcaas bash -lc "java -cp /app/src/client:/app/src/enclave:/app/src/server/target/* RemoteClient localhost 8080 test test /app/test.zip"
+          TEST_EXIT=$?
+          docker logs cmcaas --tail 200 || true
+          docker stop cmcaas || true
+          docker rm cmcaas || true
+          if [ $TEST_EXIT -ne 0 ]; then
+            echo 'E2E test failed' >&2
+            exit $TEST_EXIT
+          fi

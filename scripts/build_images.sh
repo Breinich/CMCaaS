@@ -7,7 +7,7 @@ echo "[+] Building CMCaaS Docker image..."
 docker build -t "$IMAGE_NAME:latest" .
 
 echo "[+] Building CMCaaS Simulation Docker image..."
-docker build -f Dockerfile.sim -t "$IMAGE_NAME:sim" .
+docker build -f Dockerfile_sim -t "$IMAGE_NAME:sim" .
 
 echo "[+] CMCaaS Docker images built successfully:"
 echo "    - $IMAGE_NAME:latest"

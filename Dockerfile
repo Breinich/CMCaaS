@@ -16,18 +16,18 @@ ENV LD_LIBRARY_PATH=/usr/lib/x86_64-linux-gnu
 WORKDIR /app
 
 COPY src/server /app/src/server/
+COPY scripts/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 RUN cd src/server && mvn clean package
 
 COPY src/enclave /app/src/enclave/
-
-COPY scripts/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
-
 COPY scripts /app/scripts/
+
 RUN chmod +x /app/scripts/*
 RUN chmod +x /app/src/enclave/theta/*.sh
 RUN chmod +x /app/src/enclave/theta/*.jar
 
 RUN javac src/enclave/VerifierRunner.java -d /app/src/enclave/
+RUN javac src/client/RemoteClient.java -d /app/src/client/ || true
 
 WORKDIR /app
 
