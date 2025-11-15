@@ -18,6 +18,13 @@ import javax.crypto.*;
 import javax.crypto.spec.*;
 
 /** enclave.RobustEnclaveApp */
+
+  // Validates that the Xmx string is a safe memory limit format: digits + optional unit (m/g)
+  private static boolean isValidXmx(String value) {
+    if (value == null) return false;
+    // accept values like "512m", "2g", "4096M", "4G" (case-insensitive)
+    return value.matches("(?i)^\\d{1,5}[mg]$");
+  }
 public class VerifierRunner {
   private static final String SHARED_DIR = "/host";
   private static final String EXTRACTION_DIR = "/tmp/extracted";
@@ -284,8 +291,8 @@ public class VerifierRunner {
       command.add("-Xss1m");
       command.add(
           "-Xmx"
-              + (System.getenv("THETA_XMX") != null && !System.getenv("THETA_XMX").isEmpty()
-                  ? System.getenv("THETA_XMX")
+              + (isValidXmx(System.getenv("THETA_XMX")) 
+                  ? System.getenv("THETA_XMX") 
                   : "512m"));
       command.add("-Djdk.lang.Process.launchMechanism=posix_spawn");
       command.add("-XX:-UseCompressedOops");
