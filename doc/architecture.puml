@@ -1,0 +1,58 @@
+@startuml
+left to right direction
+skinparam nodesep 40
+skinparam ranksep 40
+
+' 1. The Human User
+actor "End User" as user
+
+' 2. The Remote Device
+node "Remote Device" {
+    component "Client Software" as client_app
+}
+
+' 3. The Server Infrastructure
+node "Host Server" {
+
+    component "Enclave Proxy\nServer" as proxy
+
+    database "Database" as db {
+        ' Internal details if needed
+    }
+
+    package "Trusted Execution Env (TEE)" {
+        component "Verification Job\n[Enclave A]" as enclave1 #LightGreen
+        component "Verification Job\n[Enclave B]" as enclave2 #LightGreen
+    }
+
+    ' -- Interfaces Definitions --
+
+    ' The Proxy exposes an HTTP API
+    interface "HTTP/REST API" as http_int
+
+    ' The Database exposes a Query Interface
+    interface "SQL / TCP" as db_int
+
+    ' The Enclaves expose an invocation interface
+    interface "Enclave Call\n(ECALL)" as enclave_int
+}
+
+' --- Relationships ---
+
+' User uses the client
+user --> client_app : Inputs Data
+
+' Client connects to the Proxy via HTTP Interface
+http_int - proxy : <<provides>>
+client_app --( http_int : <<uses>>
+
+' Proxy connects to DB via SQL Interface
+db_int - db : <<provides>>
+proxy --( db_int : <<uses>>
+
+' Proxy dispatches to Enclaves via ECALL Interface
+enclave_int -- enclave1
+enclave_int -- enclave2
+proxy --( enclave_int : Dispatch
+
+@enduml
