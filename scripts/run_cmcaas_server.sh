@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -e
 
-IMAGE_NAME="cmcaas-server:"
+IMAGE_NAME="cmcaas-server"
 
 if [ -e /dev/sgx_enclave ] && [ -e /dev/sgx_provision ]; then
     echo "[+] Detected SGX devices, running in non-privileged mode..."
