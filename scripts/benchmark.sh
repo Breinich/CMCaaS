@@ -26,7 +26,7 @@ DATA_DIR="$BASE_DIR/data"
 CLIENT_DIR="$BASE_DIR/src/client"
 ENCLAVE_DIR="$BASE_DIR/src/enclave"
 TARGET_FILE="$DATA_DIR/test.zip"
-BACKUP_FILE="$DATA_DIR/test_original_7658758273654234.zip"
+BACKUP_FILE="$DATA_DIR/test.zip.bak"
 
 # --- 1. Identify Inputs ---
 # Find all zip files in data dir
@@ -67,6 +67,9 @@ ITERATION=0
 for input_file in "${FILES[@]}"; do
     ITERATION=$((ITERATION+1))
     FILENAME=$(basename "$input_file")
+
+    # Skip the backup file if it was caught by the glob (unlikely with .bak extension but good practice)
+    if [[ "$FILENAME" == "test.zip.bak" ]]; then continue; fi
 
     echo "--------------------------------------------------"
     echo "[Run $ITERATION/$NUM_FILES] Processing: $FILENAME"
