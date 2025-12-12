@@ -93,7 +93,7 @@ for input_file in "${FILES[@]}"; do
         # Run RemoteClient
         pushd "$CLIENT_DIR" > /dev/null
         # RemoteClient defaults to ../../data/test.zip if no args provided
-        java RemoteClient > /dev/null
+        java RemoteClient
         popd > /dev/null
 
         # Parse Logs
@@ -117,7 +117,7 @@ for input_file in "${FILES[@]}"; do
 
         # Run Client in the container
         pushd "$CLIENT_DIR" > /dev/null
-        docker exec -it cmcaas-server java BareClient 6000 test.zip > /dev/null
+        docker exec -it cmcaas-server java BareClient 6000 test.zip
         popd > /dev/null
 
         wait $RUNNER_PID || true
