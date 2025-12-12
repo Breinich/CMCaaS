@@ -8,9 +8,11 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.security.*;
 import java.security.spec.*;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
+import java.util.Optional;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 import java.util.zip.ZipOutputStream;
@@ -309,6 +311,13 @@ public class VerifierRunner {
 
       Process process = pb.start();
       int exitCode = process.waitFor();
+
+      // measure CPU time
+      Optional<Duration> cpuDuration = process.info().totalCpuDuration();
+        cpuDuration.ifPresent(
+            duration ->
+                System.out.println("CPU time used by verification process: " + duration.toMillis() + " ms"));
+
       if (exitCode != 0) {
         System.err.println("Verification process failed with exit code: " + exitCode);
         throw new RuntimeException("Verification process failed with exit code: " + exitCode);

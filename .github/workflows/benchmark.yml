@@ -1,0 +1,88 @@
+name: Benchmark (Simulated Enclave vs Bare)
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  benchmark:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          lfs: true
+          fetch-depth: 0
+
+      - name: Generate benchmark data
+        run: |
+          # Create 3 copies of the test file so the iterator has something to do
+          cp data/test.zip data/input_1.zip
+          cp data/test.zip data/input_2.zip
+          cp data/test.zip data/input_3.zip
+          ls -l data/
+
+      - name: Build simulation Docker image
+        run: |
+          docker build -f Dockerfile_sim -t cmcaas-server:sim .
+
+      # --- TEST 1: ENCLAVE SIMULATION ---
+      - name: Run Enclave Benchmark
+        id: enclave_bench
+        run: |
+          docker run -d -p 8080:8080 --name cmcaas cmcaas-server:sim
+          
+          echo "Waiting for server start..."
+          for i in {1..30}; do
+            if curl -sS http://localhost:8080/actuator/health >/dev/null 2>&1; then
+              echo "Server is UP"
+              break
+            fi
+            sleep 2
+          done
+          
+          echo "Running Enclave Benchmark..."
+          # Note: No --count argument anymore
+          OUTPUT=$(docker exec --user root cmcaas bash -c "./scripts/benchmark.sh --mode enclave --log /var/log/supervisor/supervisord.log")
+          echo "$OUTPUT"
+          
+          AVG=$(echo "$OUTPUT" | grep "stats_avg_time" | cut -d'=' -f2)
+          echo "enclave_avg=$AVG" >> $GITHUB_OUTPUT
+
+          docker stop cmcaas && docker rm cmcaas
+
+      # --- TEST 2: BARE METAL ---
+      - name: Run Bare Benchmark
+        id: bare_bench
+        run: |
+          docker run -d --name bare-bench cmcaas-server:sim sleep infinity
+          
+          echo "Running Bare Benchmark..."
+          # Note: No --count argument anymore
+          OUTPUT=$(docker exec --user root bare-bench bash -c "./scripts/benchmark.sh --mode bare")
+          echo "$OUTPUT"
+          
+          AVG=$(echo "$OUTPUT" | grep "stats_avg_time" | cut -d'=' -f2)
+          echo "bare_avg=$AVG" >> $GITHUB_OUTPUT
+          
+          docker stop bare-bench && docker rm bare-bench
+
+      # --- SUMMARY ---
+      - name: Compare Results
+        run: |
+          E_AVG=${{ steps.enclave_bench.outputs.enclave_avg }}
+          B_AVG=${{ steps.bare_bench.outputs.bare_avg }}
+          
+          echo "### Benchmark Results (3 Iterations) :chart_with_upwards_trend:" >> $GITHUB_STEP_SUMMARY
+          echo "| Environment | Avg CPU Time (ms) |" >> $GITHUB_STEP_SUMMARY
+          echo "| :--- | :--- |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Enclave (Sim)** | $E_AVG |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Bare Metal** | $B_AVG |" >> $GITHUB_STEP_SUMMARY
+          
+          if [ "$B_AVG" -gt 0 ]; then
+            OVERHEAD=$(echo "scale=2; ($E_AVG - $B_AVG) / $B_AVG * 100" | bc)
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "**Calculated Overhead:** ${OVERHEAD}%" >> $GITHUB_STEP_SUMMARY
+          fi

@@ -29,7 +29,9 @@ RUN chmod +x /app/src/enclave/theta/*.sh
 RUN chmod +x /app/src/enclave/theta/*.jar
 
 RUN javac src/enclave/VerifierRunner.java -d /app/src/enclave/
+RUN javac src/enclave/BareRunner.java -d /app/src/enclave/
 RUN javac src/client/RemoteClient.java -d /app/src/client/
+RUN javac src/client/BareClient.java -d /app/src/client/
 
 WORKDIR /app
 
