@@ -80,9 +80,9 @@ public class BareRunner {
 
         for (File file : files) {
             if (file.isFile()) {
-                if (file.getName().endsWith(".i")) {
+                if (file.getName().endsWith(".i") || file.getName().endsWith(".c")) {
                     if (inputFilePath != null) {
-                        throw new IllegalArgumentException("Multiple .i input files found");
+                        throw new IllegalArgumentException("Multiple input files found");
                     }
                     inputFilePath = file.getAbsolutePath();
                 } else if (file.getName().endsWith(".prp")) {
@@ -94,7 +94,7 @@ public class BareRunner {
             }
         }
         if (inputFilePath == null) {
-            throw new IllegalArgumentException("Expected exactly one .i input file, found none");
+            throw new IllegalArgumentException("Expected exactly one .i or .c input file, found none");
         }
 
         File logFile = new File(OUTPUT_DIR, "theta-log.txt");
