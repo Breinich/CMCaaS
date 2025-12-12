@@ -26,7 +26,7 @@ DATA_DIR="$BASE_DIR/data"
 CLIENT_DIR="$BASE_DIR/src/client"
 ENCLAVE_DIR="$BASE_DIR/src/enclave"
 TARGET_FILE="$DATA_DIR/test.zip"
-BACKUP_FILE="$DATA_DIR/test.zip.bak"
+BACKUP_FILE="$DATA_DIR/test_original_7658758273654234.zip"
 
 # --- 1. Identify Inputs ---
 # Find all zip files in data dir
@@ -68,9 +68,6 @@ for input_file in "${FILES[@]}"; do
     ITERATION=$((ITERATION+1))
     FILENAME=$(basename "$input_file")
 
-    # Skip the backup file if it was caught by the glob (unlikely with .bak extension but good practice)
-    if [[ "$FILENAME" == "test.zip.bak" ]]; then continue; fi
-
     echo "--------------------------------------------------"
     echo "[Run $ITERATION/$NUM_FILES] Processing: $FILENAME"
 
@@ -105,17 +102,17 @@ for input_file in "${FILES[@]}"; do
 
         BARE_LOG="/tmp/bare_${ITERATION}.log"
 
-        # Start Runner
+        # Start Runner in the container in background
         pushd "$ENCLAVE_DIR" > /dev/null
-        java BareRunner 6000 > "$BARE_LOG" 2>&1 &
+        docker exec -it cmcaas-server java BareRunner 6000 > "$BARE_LOG" 2>&1 &
         RUNNER_PID=$!
         popd > /dev/null
 
         sleep 2
 
-        # Run Client
+        # Run Client in the container
         pushd "$CLIENT_DIR" > /dev/null
-        java BareClient 6000 test.zip > /dev/null
+        docker exec -it cmcaas-server java BareClient 6000 test.zip > /dev/null
         popd > /dev/null
 
         wait $RUNNER_PID || true
