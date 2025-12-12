@@ -97,8 +97,8 @@ for input_file in "${FILES[@]}"; do
 
     elif [ "$MODE" == "bare" ]; then
         # Prepare directory for BareRunner (it reads from /tmp/input inside its container view)
-        mkdir -p /tmp/input
-        cp "$TARGET_FILE" /tmp/input/test.zip
+        docker exec -it cmcaas-server mkdir -p /tmp/input
+        docker cp "$TARGET_FILE" cmcaas-server:/tmp/input/test.zip
 
         BARE_LOG="/tmp/bare_${ITERATION}.log"
 
