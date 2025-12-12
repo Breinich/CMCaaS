@@ -132,7 +132,8 @@ for input_file in "${FILES[@]}"; do
         exit 1
     fi
 
-    MS=$(echo "$TIME_LOG" | grep -o '[0-9]\+')
+    # Extract milliseconds
+    MS=$(echo "$TIME_LOG" | grep -o '[0-9]\+ ms' | grep -o '[0-9]\+')
     echo "  > Duration: $MS ms"
     TOTAL_TIME=$((TOTAL_TIME + MS))
 
