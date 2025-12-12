@@ -6,6 +6,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.security.*;
 import java.time.Duration;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -136,14 +137,17 @@ public class BareRunner {
             pb.redirectErrorStream(true);
             pb.redirectOutput(logFile);
 
+            Instant start = Instant.now();
             Process process = pb.start();
             int exitCode = process.waitFor();
+            Instant end = Instant.now();
 
             // measure CPU time
             Optional<Duration> cpuDuration = process.info().totalCpuDuration();
-            cpuDuration.ifPresent(
-                    duration ->
-                            System.out.println("CPU time used by verification process: " + duration.toMillis() + " ms"));
+            cpuDuration.ifPresentOrElse(
+                    duration -> System.out.println("CPU time used by verification process: " + duration.toMillis() + " ms"),
+                    () -> System.out.println("CPU time used by verification process: " + Duration.between(start, end).toMillis() + " ms (wall-clock time)")
+            );
 
             if (exitCode != 0) {
                 System.err.println("Verification process failed with exit code: " + exitCode);
