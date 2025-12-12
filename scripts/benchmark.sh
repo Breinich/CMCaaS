@@ -74,8 +74,10 @@ for input_file in "${FILES[@]}"; do
     echo "--------------------------------------------------"
     echo "[Run $ITERATION/$NUM_FILES] Processing: $FILENAME"
 
-    # Swap content to target
-    cp "$input_file" "$TARGET_FILE"
+    if [[ "$FILENAME" != "test.zip" ]]; then
+        # Swap content to target
+        cp "$input_file" "$TARGET_FILE"
+    fi
 
     TIME_LOG=""
 
