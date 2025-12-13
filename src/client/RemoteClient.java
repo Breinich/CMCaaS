@@ -17,7 +17,7 @@ import javax.crypto.spec.*;
 
 public class RemoteClient {
   private SecretKey aesKey;
-  private byte[] nonce;
+  private byte[] nonceBinary;
 
   /**
    * HKDF-SHA256 implementation
@@ -96,17 +96,17 @@ public class RemoteClient {
 
     // Derive an AES key and generate nonce
     aesKey = deriveAesKey(clientPriv, enclavePub);
-    nonce = new byte[12];
-    SecureRandom.getInstanceStrong().nextBytes(nonce);
+    nonceBinary = new byte[12];
+    SecureRandom.getInstanceStrong().nextBytes(nonceBinary);
 
     byte[] clientPubBytes = clientPub.getEncoded();
 
     // Frame: [4 clientPubLen][clientPub][4 nonceLen][nonce]
-    ByteBuffer buf = ByteBuffer.allocate(4 + clientPubBytes.length + 4 + nonce.length);
+    ByteBuffer buf = ByteBuffer.allocate(4 + clientPubBytes.length + 4 + nonceBinary.length);
     buf.putInt(clientPubBytes.length);
     buf.put(clientPubBytes);
-    buf.putInt(nonce.length);
-    buf.put(nonce);
+    buf.putInt(nonceBinary.length);
+    buf.put(nonceBinary);
 
     return Base64.getEncoder().encodeToString(buf.array());
   }
@@ -256,8 +256,8 @@ public class RemoteClient {
     }
   }
 
-  private void verifyQuote(String quoteB64, byte[] nonce) throws IOException, InterruptedException {
-      ProcessBuilder builder = new ProcessBuilder("../../scripts/verify_quote.sh", quoteB64, new String(nonce, StandardCharsets.UTF_8));
+  private void verifyQuote(String quoteB64, String nonce) throws IOException, InterruptedException {
+      ProcessBuilder builder = new ProcessBuilder("../../scripts/verify_quote.sh", quoteB64, nonce);
       Process process = builder.start();
 
       BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
@@ -285,14 +285,16 @@ public class RemoteClient {
   }
 
   private void verifyEnclave(String baseUrl, String credentials, HttpClient httpClient, String enclavePubB64) {
-    byte[] nonce = new byte[32];
-    try {
-      SecureRandom.getInstanceStrong().nextBytes(nonce);
-    } catch (NoSuchAlgorithmException e) {
-      throw new RuntimeException("Failed to generate nonce: " + e.getMessage(), e);
-    }
+    // generate 32 char long random nonce
+    byte[] nonceBinary = new byte[32];
+      try {
+          SecureRandom.getInstanceStrong().nextBytes(nonceBinary);
+      } catch (NoSuchAlgorithmException e) {
+        throw new RuntimeException("Failed to generate nonce: " + e.getMessage(), e);
+      }
+      String nonce = Base64.getEncoder().encodeToString(nonceBinary);
 
-    byte[] encryptedNonce = encryptData(nonce);
+    byte[] encryptedNonce = encryptData(nonce.getBytes());
     String encryptedNonceB64 = Base64.getEncoder().encodeToString(encryptedNonce);
 
     try {
@@ -443,7 +445,7 @@ public class RemoteClient {
   private byte[] decryptData(byte[] encData) {
     try {
       Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
-      GCMParameterSpec gcmSpec = new GCMParameterSpec(128, nonce);
+      GCMParameterSpec gcmSpec = new GCMParameterSpec(128, nonceBinary);
       cipher.init(Cipher.DECRYPT_MODE, aesKey, gcmSpec);
       return cipher.doFinal(encData);
     } catch (Exception e) {
@@ -477,7 +479,7 @@ public class RemoteClient {
   private byte[] encryptData(byte[] data) {
     try {
       Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
-      GCMParameterSpec gcmSpec = new GCMParameterSpec(128, nonce);
+      GCMParameterSpec gcmSpec = new GCMParameterSpec(128, nonceBinary);
       cipher.init(Cipher.ENCRYPT_MODE, aesKey, gcmSpec);
       return cipher.doFinal(data);
     } catch (Exception e) {
