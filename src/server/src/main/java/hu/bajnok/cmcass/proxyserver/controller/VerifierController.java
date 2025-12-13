@@ -43,15 +43,44 @@ public class VerifierController {
         }
 
         logger.info("User [{}] is initiating a verifier enclave.", username);
-        String enclavePublicKey_b64 = enclaveService.launch_enclave(username);
+        String enclavePublicKey_b64 = enclaveService.launchEnclave(username);
 
         return ResponseEntity.ok(enclavePublicKey_b64);
+    }
+
+    @PostMapping(value = "/agree", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<String> agreeWithEnclave(@AuthenticationPrincipal UserDetails user,
+                                                   @RequestParam("clientData") String clientDataB64,
+                                                   @RequestParam("publicKey") String processKey) {
+        String username = (user != null) ? user.getUsername() : null;
+        if (username == null) {
+            return ResponseEntity.badRequest().body("No user authenticated");
+        }
+
+        logger.info("User [{}] isshaking hands with the enclave.", username);
+        enclaveService.shakeHands(username, clientDataB64, processKey);
+
+        return ResponseEntity.ok("Successfully agreed on the shared encryption key.");
+    }
+
+    @GetMapping("/quote")
+    public ResponseEntity<String> getEnclaveQuote(@AuthenticationPrincipal UserDetails user,
+                                                  @RequestParam("publicKey") String processKey,
+                                                  @RequestParam("encryptedNonce") String encryptedNonceB64) {
+        String username = (user != null) ? user.getUsername() : null;
+        if (username == null) {
+            return ResponseEntity.badRequest().body("No user authenticated");
+        }
+
+        logger.info("User [{}] is requesting the enclave quote.", username);
+        String quoteB64 = enclaveService.getEnclaveQuote(username, processKey, encryptedNonceB64);
+
+        return ResponseEntity.ok(quoteB64);
     }
 
     /**
      * Process uploaded file
      * @param file MultipartFile object
-     * @param clientDataB64 Base64 encoded clientData
      * @param processKey Public key of the enclave process
      * @param user Authenticated user details
      * @return Encrypted output file
@@ -59,8 +88,7 @@ public class VerifierController {
     @PostMapping(value = "/process", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<String> processEncryptedFile(
             @RequestParam("file") MultipartFile file,
-            @RequestParam("clientData") String clientDataB64,
-            @RequestParam("publicKey") String processKey,
+            @RequestParam("processKey") String processKey,
             @AuthenticationPrincipal UserDetails user) {
         String username = (user != null) ? user.getUsername() : null;
         if (username == null) {
@@ -73,7 +101,7 @@ public class VerifierController {
             Path tempFilePath = Files.createTempFile("upload_", ".zip");
             file.transferTo(tempFilePath);
 
-            enclaveService.createVerificationJob(username, tempFilePath, clientDataB64, processKey);
+            enclaveService.createVerificationJob(username, tempFilePath, processKey);
 
             return ResponseEntity.ok("Verification in progress.");
         }

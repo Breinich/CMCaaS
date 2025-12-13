@@ -5,7 +5,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
-import org.springframework.web.multipart.MultipartFile;
 
 import java.io.*;
 import java.net.Socket;
@@ -42,7 +41,7 @@ public class EnclaveService {
      * @return Enclave public key in Base64 encoding
      * @throws IOException if fails to start the process or communicate with it
      */
-    public String launch_enclave(String username) throws IOException {
+    public String launchEnclave(String username) throws IOException {
         launchLock.lock();
         try {
             String enclavePublicKey_b64 = "";
@@ -139,18 +138,17 @@ public class EnclaveService {
      *
      * @param username      username of the authenticated user
      * @param tempFileName temporary file path of the uploaded file
-     * @param clientDataB64 Base64 encoded client data
      * @param processKey    public key of the enclave process
      * @throws IOException if communication with the enclave fails
      */
     @Async("asyncExecutor")
-    public void createVerificationJob(String username, Path tempFileName, String clientDataB64, String processKey) throws IOException {
-        // 0. check if there is a verification in progress
+    public void createVerificationJob(String username, Path tempFileName, String processKey) throws IOException {
+        // check if there is a verification in progress
         if (dbService.isVerificationInProgress(username, processKey)) {
             throw new IllegalArgumentException("A verification is already in progress for this enclave.");
         }
 
-        // 1. Get the process related to the user
+        // Get the process related to the user
         int processPort;
         try {
             processPort = dbService.getProcessPort(username, processKey);
@@ -169,7 +167,7 @@ public class EnclaveService {
         try (Socket s = new Socket(HOST, port)) {
             logger.info("Connected to enclave process on port {}", port);
             dbService.updateProcessVerificationStatus(username, processKey, ProcessStatus.RUNNING);
-            boolean success = startVerification(clientDataB64, s);
+            boolean success = startVerification(s);
             if (success) {
                 dbService.updateProcessVerificationStatus(username, processKey, ProcessStatus.COMPLETED);
                 logger.info("Verification completed successfully for user {} enclave {}", username, processKey);
@@ -187,18 +185,13 @@ public class EnclaveService {
 
     /**
      * Send process command to the enclave and get the result filename
-     * @param clientDataB64 client data in Base64 encoding
      * @param s connected socket to the enclave process
      * @return true if verification finished successfully
      * @throws IOException if communication fails
      */
-    private static boolean startVerification(String clientDataB64, Socket s) throws IOException {
+    private static boolean startVerification(Socket s) throws IOException {
         DataOutputStream out = new DataOutputStream(s.getOutputStream());
         out.writeUTF("process");
-        out.flush();
-
-        // send client data
-        out.writeUTF(clientDataB64);
         out.flush();
         // send filename
         out.writeUTF(INPUT_FILE);
@@ -253,12 +246,12 @@ public class EnclaveService {
     }
 
     public byte[] getEncryptedResults(String username, String processKey) {
-        // 0. Check if there is a verification in progress
+        // Check if there is a verification in progress
         if (!dbService.doesVerificationExist(username, processKey)) {
             throw new IllegalArgumentException("There isn't any verification in progress for this enclave.");
         }
 
-        // 1. Check the process status
+        // Check the process status
         ProcessStatus status = dbService.getProcessVerificationStatus(username, processKey);
 
         if (status == ProcessStatus.RUNNING || status == ProcessStatus.CREATED) {
@@ -270,7 +263,7 @@ public class EnclaveService {
 
         logger.info("Verification ended successfully for user {} enclave {}", username, processKey);
 
-        // 2. Read the result file
+        // Read the result file
         int processPort = dbService.getProcessPort(username, processKey);
         Path outputPath = Paths.get(ENCLAVE_PREFIX + (BASE_PORT + processPort), OUTPUT_FILE);
 
@@ -279,6 +272,68 @@ public class EnclaveService {
         } catch (IOException e) {
             logger.error("Failed to read output file for user {} enclave {}", username, processKey, e);
             throw new RuntimeException(e);
+        }
+    }
+
+    /**
+     * Perform handshake with the enclave process
+     * @param username the username of the user
+     * @param clientDataB64 Base64-encoded client data
+     * @param processKey the process key
+     */
+    public void shakeHands(String username, String clientDataB64, String processKey) {
+        if (!dbService.doesVerificationExist(username, processKey))
+            throw new IllegalArgumentException("There isn't any verification in progress for this enclave.");
+
+        int processPort = dbService.getProcessPort(username, processKey);
+        int port = BASE_PORT + processPort;
+
+        try (Socket s = new Socket(HOST, port)) {
+            DataOutputStream out = new DataOutputStream(s.getOutputStream());
+            DataInputStream in = new DataInputStream(s.getInputStream());
+            out.writeUTF("handshake");
+            out.flush();
+
+            // send client data
+            out.writeUTF(clientDataB64);
+            out.flush();
+
+            String response = in.readUTF();
+            if (!response.equals("OK")) {
+                throw new IllegalStateException("Handshake failed with the enclave process.");
+            }
+        } catch (IOException e) {
+            throw new IllegalStateException("Enclave process is not running or failed to communicate.");
+        }
+    }
+
+    /**
+     * Get the enclave quote
+     * @param username the username of the user
+     * @param processKey the process key
+     * @param encryptedNonceB64 the Base64-encoded and encrypted nonce
+     * @return the enclave quote
+     */
+    public String getEnclaveQuote(String username, String processKey, String encryptedNonceB64) {
+        if (!dbService.doesVerificationExist(username, processKey))
+            throw new IllegalArgumentException("There isn't any verification in progress for this enclave.");
+
+        int processPort = dbService.getProcessPort(username, processKey);
+        int port = BASE_PORT + processPort;
+
+        try (Socket s = new Socket(HOST, port)) {
+            DataOutputStream out = new DataOutputStream(s.getOutputStream());
+            DataInputStream in = new DataInputStream(s.getInputStream());
+            out.writeUTF("quote");
+            out.flush();
+
+            // send encrypted nonce
+            out.writeUTF(encryptedNonceB64);
+            out.flush();
+
+            return in.readUTF();
+        } catch (IOException e) {
+            throw new IllegalStateException("Enclave process is not running or failed to communicate.");
         }
     }
 }
