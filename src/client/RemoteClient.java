@@ -327,23 +327,7 @@ public class RemoteClient {
     }
   }
 
-  public void run(String host, int port, String username, String password, String filename) {
-    HttpClient httpClient = HttpClient.newHttpClient();
-    String credentials =
-        Base64.getEncoder()
-            .encodeToString((username + ":" + password).getBytes(StandardCharsets.UTF_8));
-
-    final String baseUrl = "http://" + host + ":" + port + "/verifier";
-
-    register(username, password, baseUrl, httpClient);
-
-    PublicKey enclavePub = init(baseUrl, credentials, httpClient);
-    String enclavePubB64 = Base64.getEncoder().encodeToString(enclavePub.getEncoded());
-
-    shakeHands(baseUrl, credentials, httpClient, enclavePub, enclavePubB64);
-
-    verifyEnclave(baseUrl, credentials, httpClient, enclavePubB64);
-
+  private void startVerificationJob(String filename, String baseUrl, String credentials, HttpClient httpClient, String enclavePubB64) {
     Path encFilePath;
     try {
       encFilePath = Paths.get(encryptFile(filename));
@@ -361,14 +345,14 @@ public class RemoteClient {
 
       // start verification
       response =
-          httpClient.send(
-              java.net.http.HttpRequest.newBuilder()
-                  .uri(new java.net.URI(baseUrl + "/process"))
-                  .header("Authorization", "Basic " + credentials)
-                  .header("Content-Type", "multipart/form-data; boundary=" + boundary)
-                  .POST(ofMultipartData(data, boundary))
-                  .build(),
-              HttpResponse.BodyHandlers.ofString());
+              httpClient.send(
+                      java.net.http.HttpRequest.newBuilder()
+                              .uri(new java.net.URI(baseUrl + "/process"))
+                              .header("Authorization", "Basic " + credentials)
+                              .header("Content-Type", "multipart/form-data; boundary=" + boundary)
+                              .POST(ofMultipartData(data, boundary))
+                              .build(),
+                      HttpResponse.BodyHandlers.ofString());
 
       if (response.statusCode() != 200) {
         throw new RuntimeException("Failed to start the verification: " + response.body());
@@ -376,9 +360,9 @@ public class RemoteClient {
     } catch (Exception e) {
       throw new RuntimeException("Failed to send verification request: " + e.getMessage(), e);
     }
+  }
 
-    System.out.println("Verification job started. Polling for results...");
-
+  private String pollForResults(String filename, String baseUrl, String credentials, HttpClient httpClient, String enclavePubB64) {
     HttpResponse<byte[]> pollResp;
     boolean completed = false;
     Path outputFile = Paths.get("enc_response_" + new File(filename).getName());
@@ -388,15 +372,15 @@ public class RemoteClient {
         Thread.sleep(10000); // wait 10 seconds between polls
 
         HttpRequest pollRequest =
-            HttpRequest.newBuilder()
-                .uri(
-                    new URI(
-                        baseUrl
-                            + "/process?publicKey="
-                            + URLEncoder.encode(enclavePubB64, StandardCharsets.UTF_8)))
-                .header("Authorization", "Basic " + credentials)
-                .GET()
-                .build();
+                HttpRequest.newBuilder()
+                        .uri(
+                                new URI(
+                                        baseUrl
+                                                + "/process?publicKey="
+                                                + URLEncoder.encode(enclavePubB64, StandardCharsets.UTF_8)))
+                        .header("Authorization", "Basic " + credentials)
+                        .GET()
+                        .build();
 
         pollResp = httpClient.send(pollRequest, HttpResponse.BodyHandlers.ofByteArray());
 
@@ -406,19 +390,45 @@ public class RemoteClient {
           completed = true;
         } else {
           System.out.println(
-              "Result not ready yet (status "
-                  + pollResp.statusCode()
-                  + "): "
-                  + new String(pollResp.body(), StandardCharsets.UTF_8));
+                  "Result not ready yet (status "
+                          + pollResp.statusCode()
+                          + "): "
+                          + new String(pollResp.body(), StandardCharsets.UTF_8));
         }
       }
+      return outputFile.toString();
     } catch (Exception e) {
       System.err.println("Failed to download results: " + e.getMessage());
+        throw new RuntimeException("Error while polling for results: " + e.getMessage(), e);
     }
+  }
+
+  public void run(String host, int port, String username, String password, String filename) {
+    HttpClient httpClient = HttpClient.newHttpClient();
+    String credentials =
+        Base64.getEncoder()
+            .encodeToString((username + ":" + password).getBytes(StandardCharsets.UTF_8));
+
+    final String baseUrl = "http://" + host + ":" + port + "/verifier";
+
+    register(username, password, baseUrl, httpClient);
+
+    PublicKey enclavePub = init(baseUrl, credentials, httpClient);
+    String enclavePubB64 = Base64.getEncoder().encodeToString(enclavePub.getEncoded());
+
+    shakeHands(baseUrl, credentials, httpClient, enclavePub, enclavePubB64);
+
+    verifyEnclave(baseUrl, credentials, httpClient, enclavePubB64);
+
+    startVerificationJob(filename,  baseUrl, credentials, httpClient, enclavePubB64);
+
+    System.out.println("Verification job started. Polling for results...");
+
+    String outputFile = pollForResults(filename, baseUrl, credentials, httpClient, enclavePubB64);
 
     try {
       // Decrypt the response file
-      String decryptedFilename = decryptFile(outputFile.toString());
+      String decryptedFilename = decryptFile(outputFile);
       System.out.println("Decrypted result from enclave: " + decryptedFilename);
     } catch (Exception e) {
       throw new RuntimeException("Error during run: " + e.getMessage(), e);
