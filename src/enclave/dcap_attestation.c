@@ -9,6 +9,8 @@
 
 #include "occlum_dcap.h"
 
+static const int mod_table[] = {0, 2, 1};
+
 char* base64_encode(const uint8_t* data, size_t input_length) {
     const char encoding_table[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
     const char padding_character = '=';
