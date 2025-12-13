@@ -516,7 +516,7 @@ public class VerifierRunner {
         }
         deriveEncryptionKey(peerDataB64);
 
-        out.write("OK".getBytes(StandardCharsets.UTF_8));
+        out.writeUTF("OK");
         out.flush();
         System.out.println("HANDSHAKE_COMPLETED");
         break;
