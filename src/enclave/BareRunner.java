@@ -37,10 +37,18 @@ public class BareRunner {
 
         // Ensure extraction and output directories exist
         try {
+            // empty the extraction directory using rm -rf
+            ProcessBuilder pb = new ProcessBuilder("rm", "-rf", EXTRACTION_DIR, OUTPUT_DIR);
+            pb.inheritIO();
+            Process process = pb.start();
+            process.waitFor();
+
             java.nio.file.Files.createDirectories(java.nio.file.Paths.get(EXTRACTION_DIR));
             java.nio.file.Files.createDirectories(java.nio.file.Paths.get(OUTPUT_DIR));
         } catch (IOException e) {
             throw new RuntimeException("Unable to create working directories: " + e.getMessage(), e);
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
         }
 
         // extract the zip file
