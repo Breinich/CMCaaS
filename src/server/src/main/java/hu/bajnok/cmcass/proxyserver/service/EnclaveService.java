@@ -304,7 +304,7 @@ public class EnclaveService {
                 throw new IllegalStateException("Handshake failed with the enclave process.");
             }
         } catch (IOException e) {
-            throw new IllegalStateException("Enclave process is not running or failed to communicate.\n " + e.getMessage());
+            throw new IllegalStateException("Enclave process is not running or failed to communicate.");
         }
     }
 

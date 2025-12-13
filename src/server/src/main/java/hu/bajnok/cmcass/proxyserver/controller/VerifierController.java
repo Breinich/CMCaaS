@@ -63,7 +63,7 @@ public class VerifierController {
         return ResponseEntity.ok("Successfully agreed on the shared encryption key.");
     }
 
-    @GetMapping("/quote")
+    @PostMapping(value ="/quote", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<String> getEnclaveQuote(@AuthenticationPrincipal UserDetails user,
                                                   @RequestParam("publicKey") String processKey,
                                                   @RequestParam("encryptedNonce") String encryptedNonceB64) {
