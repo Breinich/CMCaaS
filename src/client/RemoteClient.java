@@ -118,8 +118,9 @@ public class RemoteClient {
 
     for (Map.Entry<Object, Object> entry : data.entrySet()) {
       byteArrays.add(("--" + boundary + LINE_FEED).getBytes(StandardCharsets.UTF_8));
-      if (entry.getValue() instanceof Path path) {
-          String mimeType = Files.probeContentType(path);
+      if (entry.getValue() instanceof Path) {
+        Path path = (Path) entry.getValue();
+        String mimeType = Files.probeContentType(path);
         byteArrays.add(
             ("Content-Disposition: form-data; name=\""
                     + entry.getKey()
