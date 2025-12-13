@@ -299,11 +299,12 @@ public class EnclaveService {
             out.flush();
 
             String response = in.readUTF();
+
             if (!response.equals("OK")) {
                 throw new IllegalStateException("Handshake failed with the enclave process.");
             }
         } catch (IOException e) {
-            throw new IllegalStateException("Enclave process is not running or failed to communicate.");
+            throw new IllegalStateException("Enclave process is not running or failed to communicate.\n " + e.getMessage());
         }
     }
 

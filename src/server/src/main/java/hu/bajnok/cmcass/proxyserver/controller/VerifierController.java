@@ -57,7 +57,7 @@ public class VerifierController {
             return ResponseEntity.badRequest().body("No user authenticated");
         }
 
-        logger.info("User [{}] isshaking hands with the enclave.", username);
+        logger.info("User [{}] is shaking hands with the enclave.", username);
         enclaveService.shakeHands(username, clientDataB64, processKey);
 
         return ResponseEntity.ok("Successfully agreed on the shared encryption key.");
