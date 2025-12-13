@@ -30,8 +30,14 @@ RUN chmod +x /app/src/enclave/theta/*.jar
 
 RUN javac src/enclave/VerifierRunner.java -d /app/src/enclave/
 RUN javac src/enclave/BareRunner.java -d /app/src/enclave/
+
 RUN javac src/client/RemoteClient.java -d /app/src/client/
 RUN javac src/client/BareClient.java -d /app/src/client/
+
+WORKDIR /app/src/enclave/
+
+RUN rm -rf  dcap_attestation
+RUN LD=ld gcc dcap_attestation.c -fPIE -pie -o dcap_attestation -L "/opt/occlum/toolchains/dcap_lib/glibc" -locclum_dcap -I /opt/intel/sgxsdk/include -I "/opt/occlum/toolchains/dcap_lib/inc"
 
 WORKDIR /app
 

@@ -422,7 +422,7 @@ public class VerifierRunner {
    * @throws Exception on error
    */
   private String getQuoteFromSubprocess(String nonce) throws Exception {
-    ProcessBuilder builder = new ProcessBuilder("dcap_attestation", nonce);
+    ProcessBuilder builder = new ProcessBuilder("/bin/dcap_attestation", nonce);
     Process process = builder.start();
 
     BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
