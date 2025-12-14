@@ -3,6 +3,7 @@
 #include <string.h>
 #include <openssl/bio.h>
 #include <openssl/evp.h>
+#include <openssl/buffer.h>
 
 #include "sgx_quote_3.h"
 #include "sgx_urts.h"
@@ -13,22 +14,33 @@
 
 char* base64_encode(const unsigned char* data, size_t input_length) {
     BIO *bio, *b64;
-    FILE* stream;
+    BUF_MEM *bufferPtr;
     size_t output_length = 4 * ((input_length + 2) / 3);
 
     char *encoded_data = (char *)malloc(output_length);
     if (encoded_data == NULL) return NULL;
 
-    stream = fmemopen(encoded_data, output_length, "w");
     b64 = BIO_new(BIO_f_base64());
-    bio = BIO_new_fp(stream, BIO_NOCLOSE);
+    BIO_set_flags(b64, BIO_FLAGS_BASE64_NO_NL);
+
+    bio = BIO_new(BIO_s_mem());
     bio = BIO_push(b64, bio);
 
     BIO_write(bio, data, input_length);
     BIO_flush(bio);
+    BIO_get_mem_ptr(bio, &bufferPtr);
+
+    char *encoded_data = (char *)malloc(bufferPtr->length + 1);
+    if (encoded_data == NULL) {
+        BIO_free_all(bio);
+        return NULL;
+    }
+
+    memcpy(encoded_data, bufferPtr->data, bufferPtr->length);
+    encoded_data[bufferPtr->length] = '\0';
+
     BIO_free_all(bio);
 
-    fclose(stream);
     return encoded_data;
 }
 

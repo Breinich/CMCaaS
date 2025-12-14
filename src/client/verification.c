@@ -15,12 +15,13 @@ unsigned char* base64_decode(const char* encoded_data, size_t* output_length) {
     BIO *bio, *b64;
     size_t input_length = strlen(encoded_data);
 
-    *output_length = (input_length * 3) / 4;
-    unsigned char* decoded_data = (unsigned char*)malloc(*output_length);
+    size_t max_len = (input_length * 3) / 4 + 1;
+    unsigned char* decoded_data = (unsigned char*)malloc(max_len);
     if (decoded_data == NULL) return NULL;
 
     bio = BIO_new_mem_buf(encoded_data, -1);
     b64 = BIO_new(BIO_f_base64());
+	BIO_set_flags(b64, BIO_FLAGS_BASE64_NO_NL);
     bio = BIO_push(b64, bio);
 
     *output_length = BIO_read(bio, decoded_data, input_length);
