@@ -5,41 +5,26 @@
 #include <openssl/sha.h>
 #include <sgx_dcap_quoteverify.h>
 #include <sgx_ql_lib_common.h>
-#include <sgx_quote_3.h> // For parsing the quote structure
+#include <sgx_quote_3.h>
+#include <openssl/bio.h>
+#include <openssl/evp.h>
 
-// Base64 Decode Helper
-static const unsigned char base64_table[256] = {
-    64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64,
-    64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64,
-    64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 62, 64, 64, 64, 63,
-    52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 64, 64, 64, 64, 64, 64,
-    64,  0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14,
-    15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 64, 64, 64, 64, 64,
-    64, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40,
-    41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 64, 64, 64, 64, 64
-};
+unsigned char* base64_decode(const char* encoded_data, size_t* output_length) {
+    BIO *bio, *b64;
+    size_t input_length = strlen(encoded_data);
 
-unsigned char *base64_decode(const char *src, size_t len, size_t *out_len) {
-    unsigned char *out, *pos, block[4];
-    size_t i, count, pad = 0;
-    if (len >= 4 && src[len - 1] == '=') pad++;
-    if (len >= 4 && src[len - 2] == '=') pad++;
-    count = (len / 4) * 3 - pad;
-    out = (unsigned char *)malloc(count);
-    if (out == NULL) return NULL;
-    pos = out;
-    for (i = 0; i < len; i += 4) {
-        block[0] = base64_table[(unsigned char)src[i]];
-        block[1] = base64_table[(unsigned char)src[i + 1]];
-        block[2] = base64_table[(unsigned char)src[i + 2]];
-        block[3] = base64_table[(unsigned char)src[i + 3]];
-        if ((block[0] | block[1] | block[2] | block[3]) == 64) { free(out); return NULL; }
-        *pos++ = (block[0] << 2) | (block[1] >> 4);
-        if (pos < out + count) *pos++ = (block[1] << 4) | (block[2] >> 2);
-        if (pos < out + count) *pos++ = (block[2] << 6) | block[3];
-    }
-    *out_len = count;
-    return out;
+    *output_length = (input_length * 3) / 4;
+    unsigned char* decoded_data = (unsigned char*)malloc(*output_length);
+    if (decoded_data == NULL) return NULL;
+
+    bio = BIO_new_mem_buf(encoded_data, -1);
+    b64 = BIO_new(BIO_f_base64());
+    bio = BIO_push(b64, bio);
+
+    *output_length = BIO_read(bio, decoded_data, input_length);
+    BIO_free_all(bio);
+
+    return decoded_data;
 }
 
 int main(int argc, char *argv[]) {
@@ -47,7 +32,7 @@ int main(int argc, char *argv[]) {
 
     char *nonce = argv[2];
     size_t quote_size = 0;
-    uint8_t *quote_buffer = base64_decode(argv[1], strlen(argv[1]), &quote_size);
+    uint8_t *quote_buffer = base64_decode(argv[1], &quote_size);
     if (!quote_buffer) { printf("Invalid Base64\n"); return 1; }
 
     // --- STEP 1: VERIFY NONCE (REPORT DATA) ---

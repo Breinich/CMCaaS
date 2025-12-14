@@ -1,6 +1,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <openssl/bio.h>
+#include <openssl/evp.h>
 
 #include "sgx_quote_3.h"
 #include "sgx_urts.h"
@@ -9,33 +11,24 @@
 
 #include "occlum_dcap.h"
 
-static const int mod_table[] = {0, 2, 1};
-
-char* base64_encode(const uint8_t* data, size_t input_length) {
-    const char encoding_table[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
-    const char padding_character = '=';
+char* base64_encode(const unsigned char* data, size_t input_length) {
+    BIO *bio, *b64;
+    FILE* stream;
     size_t output_length = 4 * ((input_length + 2) / 3);
 
-    char* encoded_data = (char*)malloc(output_length + 1);
+    char *encoded_data = (char *)malloc(output_length);
     if (encoded_data == NULL) return NULL;
 
-    for (size_t i = 0, j = 0; i < input_length;) {
-        uint32_t octet_a = i < input_length ? data[i++] : 0;
-        uint32_t octet_b = i < input_length ? data[i++] : 0;
-        uint32_t octet_c = i < input_length ? data[i++] : 0;
+    stream = fmemopen(encoded_data, output_length, "w");
+    b64 = BIO_new(BIO_f_base64());
+    bio = BIO_new_fp(stream, BIO_NOCLOSE);
+    bio = BIO_push(b64, bio);
 
-        uint32_t triple = (octet_a << 16) + (octet_b << 8) + octet_c;
+    BIO_write(bio, data, input_length);
+    BIO_flush(bio);
+    BIO_free_all(bio);
 
-        encoded_data[j++] = encoding_table[(triple >> 18) & 0x3F];
-        encoded_data[j++] = encoding_table[(triple >> 12) & 0x3F];
-        encoded_data[j++] = encoding_table[(triple >> 6) & 0x3F];
-        encoded_data[j++] = encoding_table[triple & 0x3F];
-    }
-
-    for (size_t i = 0; i < mod_table[input_length % 3]; i++)
-        encoded_data[output_length - 1 - i] = padding_character;
-
-    encoded_data[output_length] = '\0';
+    fclose(stream);
     return encoded_data;
 }
 
