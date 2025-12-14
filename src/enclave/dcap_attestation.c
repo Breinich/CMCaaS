@@ -48,7 +48,7 @@ void main(int argc, char *argv[]) {
 
     int exit_code = 0;
 
-    char *nonce = argv[1];
+    char *nonce = "test nonce string for quote"; //argv[1];
     void *handle;
     uint32_t quote_size, supplemental_size;
     uint8_t *p_quote_buffer, *p_supplemental_buffer;

@@ -3,7 +3,7 @@ set -e
 
 # --- CONFIGURATION ---
 # Replace with your public PCCS URL if clients are external
-PCCS_URL="https://localhost:8081/sgx/certification/v4/"
+PCCS_URL="https://api.trustedservices.intel.com/sgx/certification/v4/"
 
 # Check arguments
 if [ -z "$1" ] || [ -z "$2" ]; then

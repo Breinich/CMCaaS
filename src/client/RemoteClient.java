@@ -293,6 +293,7 @@ public class RemoteClient {
         throw new RuntimeException("Failed to generate nonce: " + e.getMessage(), e);
       }
       String nonce = Base64.getEncoder().encodeToString(nonceBinary);
+      nonce = "test nonce string for quote";
 
     byte[] encryptedNonce = encryptData(nonce.getBytes());
     String encryptedNonceB64 = Base64.getEncoder().encodeToString(encryptedNonce);

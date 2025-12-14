@@ -39,6 +39,8 @@ WORKDIR /app/src/enclave/
 RUN rm -rf  dcap_attestation
 RUN LD=ld gcc dcap_attestation.c -fPIE -pie -o dcap_attestation -L "/opt/occlum/toolchains/dcap_lib/glibc" -locclum_dcap -I /opt/intel/sgxsdk/include -I "/opt/occlum/toolchains/dcap_lib/inc"
 
+RUN sed -i 's|^"pccs_url":.*|pccs_url: "https://api.trustedservices.intel.com/sgx/certification/v4/"|' /etc/sgx_default_qcnl.conf
+
 WORKDIR /app
 
 EXPOSE 8080
