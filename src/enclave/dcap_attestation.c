@@ -17,9 +17,6 @@ char* base64_encode(const unsigned char* data, size_t input_length) {
     BUF_MEM *bufferPtr;
     size_t output_length = 4 * ((input_length + 2) / 3);
 
-    char *encoded_data = (char *)malloc(output_length);
-    if (encoded_data == NULL) return NULL;
-
     b64 = BIO_new(BIO_f_base64());
     BIO_set_flags(b64, BIO_FLAGS_BASE64_NO_NL);
 
