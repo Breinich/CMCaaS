@@ -13,11 +13,12 @@ ENV SGX_QPL_LOGGING_LEVEL=debug
 
 WORKDIR /app
 
-COPY src/client/verification.c /app/src/client/verification.c
+COPY src/client/verification.c /app/verification.c
+COPY src/enclave/dcap_attestation.c /app/dcap_attestation.c
+
 RUN cp /opt/occlum/toolchains/dcap_lib/glibc/libocclum_dcap.so.0.1.0 /opt/occlum/glibc/lib
 
-WORKDIR /app/src/client/
-
+RUN LD=ld gcc dcap_attestation.c -fPIE -pie -o dcap_attestation -L "/opt/occlum/toolchains/dcap_lib/glibc" -locclum_dcap -I /opt/intel/sgxsdk/include -I "/opt/occlum/toolchains/dcap_lib/inc" -lssl -lcrypto
 RUN LD=ld gcc verification.c -fPIE -pie -o verification -L "/opt/occlum/toolchains/dcap_lib/glibc" -locclum_dcap -I /opt/intel/sgxsdk/include -I "/opt/occlum/toolchains/dcap_lib/inc" -lssl -lcrypto
 
 RUN sed -i 's|https://localhost:8081/sgx/certification/v4/|https://api.trustedservices.intel.com/sgx/certification/v4/|g' /etc/sgx_default_qcnl.conf
