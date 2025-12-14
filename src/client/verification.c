@@ -33,6 +33,7 @@ int main(int argc, char *argv[]) {
     if (argc < 3) return 1;
 
     char *nonce = argv[2];
+	int exit_code = 0;
 
     void* handle;
 	handle = dcap_quote_open();
@@ -46,7 +47,7 @@ int main(int argc, char *argv[]) {
     sgx_report_data_t *p_rep_data = (sgx_report_data_t *)(&p_rep_body->report_data);
 
     printf("nonce: %s\n", nonce);
-    printf("Report Data in Quote : ", p_rep_data->d);
+    printf("Report Data in Quote: %s\n", p_rep_data->d);
 
     size_t nonce_len = strlen(nonce);
     if (nonce_len > sizeof(p_rep_data->d)) {
@@ -54,7 +55,7 @@ int main(int argc, char *argv[]) {
     }
 
     if (memcmp(p_rep_data->d, nonce, nonce_len) != 0)
-        printf("   [!] Error: Nonce mismatch in report data.\n");
+        printf("Error: Nonce mismatch in report data.\n");
 
     uint32_t supplemental_size = dcap_get_supplemental_data_size(handle);
     printf("supplemental_size size = %d\n", supplemental_size);
@@ -80,6 +81,7 @@ int main(int argc, char *argv[]) {
 
     if (0 != ret) {
         printf( "Error in dcap_verify_quote.\nReturn code: %d\n", ret);
+		exit_code = ret;
     }
 
     if (collateral_expiration_status != 0) {
@@ -119,5 +121,5 @@ CLEANUP:
     }
 
     dcap_quote_close(handle);
-    return 0;
+    return exit_code;
 }
