@@ -35,6 +35,7 @@ int main(int argc, char *argv[]) {
     char *nonce = argv[2];
 
     void* handle;
+	handle = dcap_quote_open();
 
     size_t quote_size = 0;
     uint8_t *quote_buffer = base64_decode(argv[1], &quote_size);
