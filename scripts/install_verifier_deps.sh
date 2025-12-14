@@ -22,8 +22,13 @@ apt-get install -y -qq libsgx-dcap-quote-verify-dev libsgx-dcap-default-qpl buil
 mkdir -p /etc
 cat <<EOF > /etc/sgx_default_qcnl.conf
 {
-  "pccs_url": "$PCCS_URL",
-  "use_secure_cert": true
+  "pccs_url": "https://api.trustedservices.intel.com/sgx/certification/v4/"
+  ,"use_secure_cert": true
+  ,"retry_times": 6
+  ,"retry_delay": 10
+  ,"pck_cache_expire_hours": 168
+  ,"verify_collateral_cache_expire_hours": 168
+  ,"local_cache_only": false
 }
 EOF
 
