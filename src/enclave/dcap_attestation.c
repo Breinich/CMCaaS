@@ -88,6 +88,10 @@ CLEANUP:
         free(p_supplemental_buffer);
     }
 
+    if (NULL != b64_quote) {
+        free(b64_quote);
+    }
+
     dcap_quote_close(handle);
 
     exit(exit_code);
