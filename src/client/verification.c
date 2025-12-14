@@ -42,8 +42,8 @@ int main(int argc, char *argv[]) {
     printf("Report Data in Quote : ", p_rep_body->report_data.d);
 
     size_t nonce_len = strlen(nonce);
-    if (nonce_len > sizeof(report_data.d)) {
-        nonce_len = sizeof(report_data.d); // Truncate if too long
+    if (nonce_len > sizeof(p_rep_body->report_data.d)) {
+        nonce_len = sizeof(p_rep_body->report_data.d); // Truncate if too long
     }
 
     if (memcmp(p_rep_body->report_data.d, nonce, nonce_len) != 0)
