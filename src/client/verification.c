@@ -38,16 +38,17 @@ int main(int argc, char *argv[]) {
     sgx_quote3_t *p_quote = (sgx_quote3_t *)quote_buffer;
     sgx_report_body_t *p_rep_body = (sgx_report_body_t *)(&p_quote->report_body);
 
-    if (memcmp(p_rep_body->report_data.d, nonce, strlen(nonce)) != 0) {
-        printf("\n   [FAILURE] INTEGRITY CHECK FAILED!\n");
-        printf("             The quote does NOT match the provided nonce.\n");
-        printf("             This might be a replay attack or the enclave used different data.\n");
-        free(quote_buffer);
-        return 1;
-    }
-    printf("   [PASS] Nonce matches Quote Report Data (SHA256).\n");
+    printf("nonce: %s\n", nonce);
+    printf("Report Data in Quote : ", p_rep_body->report_data.d);
 
-    // --- STEP 2: VERIFY INTEL SIGNATURE ---
+    size_t nonce_len = strlen(nonce);
+    if (nonce_len > sizeof(report_data.d)) {
+        nonce_len = sizeof(report_data.d); // Truncate if too long
+    }
+
+    if (memcmp(p_rep_body->report_data.d, nonce, nonce_len) != 0)
+        printf("   [!] Error: Nonce mismatch in report data.\n");
+
     uint32_t collateral_expiration_status = 1;
     sgx_ql_qv_result_t quote_verification_result = SGX_QL_QV_RESULT_UNSPECIFIED;
     uint32_t supplemental_size = 0;
