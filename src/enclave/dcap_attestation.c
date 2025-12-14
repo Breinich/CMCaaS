@@ -69,7 +69,7 @@ void main(int argc, char *argv[]) {
     memset(p_quote_buffer, 0, quote_size);
 
     sgx_report_data_t report_data = { 0 };
-    strncpy((char*)report_data.d, nonce, sizeof(report_data.d));
+    memcpy(report_data.d, nonce, strlen(nonce));
 
     // Get the Quote
     ret = dcap_generate_quote(handle, p_quote_buffer, &report_data);
