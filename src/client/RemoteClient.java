@@ -285,15 +285,13 @@ public class RemoteClient {
   }
 
   private void verifyEnclave(String baseUrl, String credentials, HttpClient httpClient, String enclavePubB64) {
-    // generate 32 char long random nonce
-    byte[] nonceBinary = new byte[32];
-      try {
-          SecureRandom.getInstanceStrong().nextBytes(nonceBinary);
-      } catch (NoSuchAlgorithmException e) {
-        throw new RuntimeException("Failed to generate nonce: " + e.getMessage(), e);
-      }
-      String nonce = Base64.getEncoder().encodeToString(nonceBinary);
-      nonce = "test nonce string for quote";
+    byte[] nonceBinary = new byte[24];
+    try {
+        SecureRandom.getInstanceStrong().nextBytes(nonceBinary);
+    } catch (NoSuchAlgorithmException e) {
+      throw new RuntimeException("Failed to generate nonce: " + e.getMessage(), e);
+    }
+    String nonce = Base64.getEncoder().encodeToString(nonceBinary);
 
     byte[] encryptedNonce = encryptData(nonce.getBytes());
     String encryptedNonceB64 = Base64.getEncoder().encodeToString(encryptedNonce);

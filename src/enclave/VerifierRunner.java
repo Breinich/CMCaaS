@@ -492,9 +492,6 @@ public class VerifierRunner {
         }
 
         String nonce = new String(decryptData(Base64.getDecoder().decode(enctyptedNonce)), StandardCharsets.UTF_8);
-        if (nonce.length() != 32) {
-          System.err.println("WARNING: Nonce length is not 32 bytes");
-        }
         System.out.println("DECRYPTED_QUOTE_NONCE=" + nonce);
 
         String quoteB64 = getQuoteFromSubprocess(nonce);
