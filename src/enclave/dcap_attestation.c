@@ -60,12 +60,12 @@ void main(int argc, char *argv[]) {
     }
     memset(p_quote_buffer, 0, quote_size);
 
+    sgx_report_data_t report_data = { 0 };
     size_t nonce_len = strlen(nonce);
     if (nonce_len > sizeof(report_data.d)) {
         nonce_len = sizeof(report_data.d); // Truncate if too long
     }
 
-    sgx_report_data_t report_data = { 0 };
     memcpy(report_data.d, nonce, nonce_len);
 
     ret = dcap_generate_quote(handle, p_quote_buffer, &report_data);
