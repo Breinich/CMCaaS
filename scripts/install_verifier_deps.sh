@@ -19,6 +19,8 @@ fi
 apt-get install -y -qq libsgx-dcap-quote-verify-dev libsgx-dcap-default-qpl build-essential libssl-dev > /dev/null
 
 # 2. CONFIGURE PCCS
+echo "[+] Configuring PCCS..."
+export SGX_QCNL_CONF_FILE=/etc/sgx_default_qcnl.conf
 mkdir -p /etc
 cat <<EOF > /etc/sgx_default_qcnl.conf
 {
