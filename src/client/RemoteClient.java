@@ -293,6 +293,8 @@ public class RemoteClient {
     }
     String nonce = Base64.getEncoder().encodeToString(nonceBinary);
 
+    System.out.println("Generated Nonce: " + nonce);
+
     byte[] encryptedNonce = encryptData(nonce.getBytes());
     String encryptedNonceB64 = Base64.getEncoder().encodeToString(encryptedNonce);
 

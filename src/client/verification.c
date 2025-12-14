@@ -35,19 +35,10 @@ int main(int argc, char *argv[]) {
     uint8_t *quote_buffer = base64_decode(argv[1], &quote_size);
     if (!quote_buffer) { printf("Invalid Base64\n"); return 1; }
 
-    // --- STEP 1: VERIFY NONCE (REPORT DATA) ---
-    // We expect the enclave to have done: ReportData = SHA256(Nonce)
-    // So we calculate SHA256(Nonce) here and compare.
-
-    unsigned char calculated_hash[SHA256_DIGEST_LENGTH];
-    SHA256((unsigned char*)nonce, strlen(nonce), calculated_hash);
-
-    // Cast buffer to quote structure to access report body
     sgx_quote3_t *p_quote = (sgx_quote3_t *)quote_buffer;
     sgx_report_body_t *p_rep_body = (sgx_report_body_t *)(&p_quote->report_body);
 
-    // Compare first 32 bytes of report data
-    if (memcmp(p_rep_body->report_data.d, calculated_hash, SHA256_DIGEST_LENGTH) != 0) {
+    if (memcmp(p_rep_body->report_data.d, nonce, strlen(nonce)) != 0) {
         printf("\n   [FAILURE] INTEGRITY CHECK FAILED!\n");
         printf("             The quote does NOT match the provided nonce.\n");
         printf("             This might be a replay attack or the enclave used different data.\n");
