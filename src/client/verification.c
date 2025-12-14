@@ -34,6 +34,8 @@ int main(int argc, char *argv[]) {
 
     char *nonce = argv[2];
 
+    void* handle;
+
     size_t quote_size = 0;
     uint8_t *quote_buffer = base64_decode(argv[1], &quote_size);
     if (!quote_buffer) { printf("Invalid Base64\n"); return 1; }
@@ -43,14 +45,14 @@ int main(int argc, char *argv[]) {
     sgx_report_data_t *p_rep_data = (sgx_report_data_t *)(&p_rep_body->report_data);
 
     printf("nonce: %s\n", nonce);
-    printf("Report Data in Quote : ", p_rep_data.d);
+    printf("Report Data in Quote : ", p_rep_data->d);
 
     size_t nonce_len = strlen(nonce);
-    if (nonce_len > sizeof(p_rep_data.d)) {
-        nonce_len = sizeof(p_rep_data.d); // Truncate if too long
+    if (nonce_len > sizeof(p_rep_data->d)) {
+        nonce_len = sizeof(p_rep_data->d); // Truncate if too long
     }
 
-    if (memcmp(p_rep_data.d, nonce, nonce_len) != 0)
+    if (memcmp(p_rep_data->d, nonce, nonce_len) != 0)
         printf("   [!] Error: Nonce mismatch in report data.\n");
 
     uint32_t supplemental_size = dcap_get_supplemental_data_size(handle);
@@ -67,7 +69,7 @@ int main(int argc, char *argv[]) {
 
     int32_t ret = dcap_verify_quote(
         handle,
-        p_quote_buffer,
+        quote_buffer,
         quote_size,
         &collateral_expiration_status,
         &quote_verification_result,
