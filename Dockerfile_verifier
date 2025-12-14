@@ -9,7 +9,7 @@ ENV LD_LIBRARY_PATH=/usr/lib/x86_64-linux-gnu:/opt/occlum/glibc/lib
 WORKDIR /app
 
 COPY src/client/verification.c /app/src/client/verification.c
-COPY /opt/occlum/toolchains/dcap_lib/glibc/libocclum_dcap.so.0.1.0 /opt/occlum/glibc/lib
+RUN cp /opt/occlum/toolchains/dcap_lib/glibc/libocclum_dcap.so.0.1.0 /opt/occlum/glibc/lib
 
 WORKDIR /app/src/client/
 
