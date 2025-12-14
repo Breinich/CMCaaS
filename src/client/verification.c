@@ -37,10 +37,13 @@ int main(int argc, char *argv[]) {
 
     void* handle;
 	handle = dcap_quote_open();
+    uint32_t quote_size = 0;
 
-    size_t quote_size = 0;
     uint8_t *quote_buffer = base64_decode(argv[1], &quote_size);
     if (!quote_buffer) { printf("Invalid Base64\n"); return 1; }
+
+	printf("quote size = %d\n", quote_size);
+	printf("handle based quote size = %d\n", dcap_get_quote_size(handle));
 
     sgx_quote3_t *p_quote = (sgx_quote3_t *)quote_buffer;
     sgx_report_body_t *p_rep_body = (sgx_report_body_t *)(&p_quote->report_body);
@@ -54,7 +57,7 @@ int main(int argc, char *argv[]) {
         nonce_len = sizeof(p_rep_data->d); // Truncate if too long
     }
 
-    if (memcmp(p_rep_data->d, nonce, nonce_len) != 0)
+    if (memcmp((void *)p_rep_data->d, (void *)nonce, nonce_len) != 0)
         printf("Error: Nonce mismatch in report data.\n");
 
     uint32_t supplemental_size = dcap_get_supplemental_data_size(handle);
