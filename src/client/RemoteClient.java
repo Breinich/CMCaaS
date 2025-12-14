@@ -257,31 +257,37 @@ public class RemoteClient {
   }
 
   private void verifyQuote(String quoteB64, String nonce) throws IOException, InterruptedException {
-      ProcessBuilder builder = new ProcessBuilder("docker", "run", "--rm", "-it", "cmcaas-verifier:latest", quoteB64, nonce);;
+      File logFile = new File("docker_verifier_output.log");
+
+      ProcessBuilder builder = new ProcessBuilder("docker", "run", "--rm", "cmcaas-verifier:latest", quoteB64, nonce);;
+      builder.redirectErrorStream(true);
+
       Process process = builder.start();
 
-      BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
+      List<String> lines = new ArrayList<>();
+      try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
+           BufferedWriter fileWriter = new BufferedWriter(new FileWriter(logFile))) {
+          String line;
+          while ((line = reader.readLine()) != null) {
+              lines.add(line);
+              fileWriter.write(line);
+              fileWriter.newLine();
+          }
+      } catch (Exception e) {
+          throw new RuntimeException("Error reading process output", e);
+      }
 
       int exitCode = process.waitFor();
-      ArrayList<String> lines = new ArrayList<>();
-      String line;
-
-      while ((line = reader.readLine()) != null) {
-        lines.add(line);
-      }
-
-      if (lines.isEmpty()) {
-        System.err.println("Verifier returned no output.");
-        throw new RuntimeException("Failed to verify quote: No output from verifier.");
-      }
 
       if (exitCode == 0) {
         System.out.println("Enclave quote verified successfully.");
       }
       else {
-      System.err.println("Verification Failed: \n" + String.join("\n", lines));
-      throw new RuntimeException("Failed to verify quote: Verification failed: \n" + String.join("\n", lines));
-    }
+          String errorOutput = lines.isEmpty() ? "No output captured." : String.join("\n", lines);
+
+          System.err.println("Verification Failed (Exit Code " + exitCode + "):\n" + errorOutput);
+          throw new RuntimeException("Failed to verify quote. Exit Code: " + exitCode + ". Output:\n" + errorOutput);
+      }
   }
 
   private void verifyEnclave(String baseUrl, String credentials, HttpClient httpClient, String enclavePubB64) {
