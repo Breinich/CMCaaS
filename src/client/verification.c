@@ -78,8 +78,7 @@ int main(int argc, char *argv[]) {
         );
 
     if (0 != ret) {
-        printf( "Error in dcap_verify_quote.\n");
-        goto CLEANUP;
+        printf( "Error in dcap_verify_quote.\nReturn code: %d\n", ret);
     }
 
     if (collateral_expiration_status != 0) {
