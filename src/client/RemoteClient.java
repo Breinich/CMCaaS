@@ -257,7 +257,7 @@ public class RemoteClient {
   }
 
   private void verifyQuote(String quoteB64, String nonce) throws IOException, InterruptedException {
-      ProcessBuilder builder = new ProcessBuilder("docker", "run", "--rm", "cmcaas-verifier:latest", quoteB64, nonce);
+      ProcessBuilder builder = new ProcessBuilder("docker", "run", "--rm", "-it", "cmcaas-verifier:latest", quoteB64, nonce);;
       Process process = builder.start();
 
       BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
