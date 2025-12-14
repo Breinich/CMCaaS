@@ -493,6 +493,7 @@ public class VerifierRunner {
 
         String nonce = new String(decryptData(Base64.getDecoder().decode(enctyptedNonce)), StandardCharsets.UTF_8);
         System.out.println("DECRYPTED_QUOTE_NONCE=" + nonce);
+        nonce = "Example Nonce for Enclave Verification";
 
         String quoteB64 = getQuoteFromSubprocess(nonce);
         System.out.println("QUOTE_BASE64=" + quoteB64);

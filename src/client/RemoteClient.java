@@ -292,6 +292,7 @@ public class RemoteClient {
       throw new RuntimeException("Failed to generate nonce: " + e.getMessage(), e);
     }
     String nonce = Base64.getEncoder().encodeToString(nonceBinary);
+    nonce = "Example Nonce for Enclave Verification";
 
     System.out.println("Generated Nonce: " + nonce);
 
