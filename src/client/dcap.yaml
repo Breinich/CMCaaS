@@ -1,0 +1,13 @@
+includes:
+  - base.yaml
+
+targets:
+  - target: /bin
+    copy:
+      - files:
+          - /opt/occlum/toolchains/dcap_lib/glibc/dcap_test
+          - /app/src/client/verification
+  - target: /opt/occlum/glibc/lib
+    copy:
+      - files:
+          - /opt/occlum/toolchains/dcap_lib/glibc/libocclum_dcap.so.0.1.0

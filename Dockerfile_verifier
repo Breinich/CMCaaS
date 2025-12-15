@@ -19,6 +19,11 @@ WORKDIR /app/src/client/
 
 RUN LD=ld gcc verification.c -fPIE -pie -o verification -L "/opt/occlum/toolchains/dcap_lib/glibc" -locclum_dcap -I /opt/intel/sgxsdk/include -I "/opt/occlum/toolchains/dcap_lib/inc" -lssl -lcrypto
 
+RUN rm -rf occlum_instance && occlum new occlum_instance
+WORKDIR /app/src/client/occlum_instance
+RUN copy_bom -f ../dcap.yaml --root image --include-dir /opt/occlum/etc/template
+RUN occlum build
+
 RUN sed -i 's|https://localhost:8081/sgx/certification/v4/|https://api.trustedservices.intel.com/sgx/certification/v4/|g' /etc/sgx_default_qcnl.conf
 
-ENTRYPOINT ["strace", "-f", "-e", "trace=open,openat", "/app/src/client/verification"]
+ENTRYPOINT ["occlum", "run", "/bin/verification"]
