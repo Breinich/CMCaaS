@@ -15,7 +15,7 @@ WORKDIR /app
 COPY src/client/ /app/src/client/
 
 WORKDIR /app/src/client/
-RUN chmod +x *.sh
+RUN chmod +x run_dcap.sh
 
 RUN LD=ld gcc verification.c -fPIE -pie -o verification -L "/opt/occlum/toolchains/dcap_lib/glibc" -locclum_dcap -I /opt/intel/sgxsdk/include -I "/opt/occlum/toolchains/dcap_lib/inc" -lssl -lcrypto
 
