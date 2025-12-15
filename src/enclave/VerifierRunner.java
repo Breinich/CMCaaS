@@ -21,9 +21,9 @@ import javax.crypto.*;
 import javax.crypto.spec.*;
 
 /**
- * VerifierRunner performs secure, E2E encrypted model verification.
- * It listens for commands over a socket, handles key exchange, decrypts input files,
- * runs the verification process, and encrypts the output files.
+ * VerifierRunner performs secure, E2E encrypted model verification. It listens for commands over a
+ * socket, handles key exchange, decrypts input files, runs the verification process, and encrypts
+ * the output files.
  */
 public class VerifierRunner {
   private static final String SHARED_DIR = "/host";
@@ -48,6 +48,7 @@ public class VerifierRunner {
 
   /**
    * Export public key as Base64 (X.509 encoded)
+   *
    * @return Base64 string
    */
   private String exportPublicKey() {
@@ -56,6 +57,7 @@ public class VerifierRunner {
 
   /**
    * HKDF-SHA256 implementation
+   *
    * @param salt optional salt
    * @param ikm input keying material
    * @param info optional context and application-specific information
@@ -91,6 +93,7 @@ public class VerifierRunner {
 
   /**
    * Concatenate two byte arrays
+   *
    * @param a first byte array
    * @param b second byte array
    * @return concatenated byte array
@@ -104,6 +107,7 @@ public class VerifierRunner {
 
   /**
    * Derive an AES key from ECDH shared secret
+   *
    * @param peerPub the client's public key
    * @return derived AES key
    */
@@ -120,6 +124,7 @@ public class VerifierRunner {
 
   /**
    * Unpack the payload and derive an AES key
+   *
    * @param encryptedMessageBase64 Base64-encoded encrypted payload
    */
   private void deriveEncryptionKey(String encryptedMessageBase64) throws Exception {
@@ -148,11 +153,12 @@ public class VerifierRunner {
     aesKey = deriveAesKey(clientPub);
   }
 
-    /**
-     * Decrypt data using AES-GCM
-     * @param encryptedData encrypted data
-     * @return decrypted data
-     */
+  /**
+   * Decrypt data using AES-GCM
+   *
+   * @param encryptedData encrypted data
+   * @return decrypted data
+   */
   private byte[] decryptData(byte[] encryptedData) throws Exception {
     if (aesKey == null || nonce == null) {
       throw new IllegalStateException("Missing encryption context");
@@ -167,6 +173,7 @@ public class VerifierRunner {
 
   /**
    * Decrypt uploaded file
+   *
    * @param filename file name
    */
   private void decryptFile(String filename) throws Exception {
@@ -307,9 +314,14 @@ public class VerifierRunner {
       // measure CPU time
       Optional<Duration> cpuDuration = process.info().totalCpuDuration();
       cpuDuration.ifPresentOrElse(
-              duration -> System.out.println("CPU time used by verification process: " + duration.toMillis() + " ms"),
-              () -> System.out.println("CPU time used by verification process: " + Duration.between(start, end).toMillis() + " ms (wall-clock time)")
-      );
+          duration ->
+              System.out.println(
+                  "CPU time used by verification process: " + duration.toMillis() + " ms"),
+          () ->
+              System.out.println(
+                  "CPU time used by verification process: "
+                      + Duration.between(start, end).toMillis()
+                      + " ms (wall-clock time)"));
 
       if (exitCode != 0) {
         System.err.println("Verification process failed with exit code: " + exitCode);
@@ -400,6 +412,7 @@ public class VerifierRunner {
 
   /**
    * Get quote from subprocess
+   *
    * @param nonce nonce provided by the client
    * @return b64 encoded quote
    * @throws Exception on error
@@ -417,7 +430,8 @@ public class VerifierRunner {
 
     int exitCode = process.waitFor();
     if (exitCode != 0) {
-      throw new RuntimeException("Quote generation failed. Exit code: " + exitCode + ". Output: " + output);
+      throw new RuntimeException(
+          "Quote generation failed. Exit code: " + exitCode + ". Output: " + output);
     }
 
     return output.toString().trim();
@@ -474,13 +488,17 @@ public class VerifierRunner {
           throw new IllegalArgumentException("No encrypted nonce received for quote");
         }
 
-        String nonce = new String(decryptData(Base64.getDecoder().decode(enctyptedNonce)), StandardCharsets.UTF_8);
+        String nonce =
+            new String(
+                decryptData(Base64.getDecoder().decode(enctyptedNonce)), StandardCharsets.UTF_8);
         System.out.println("DECRYPTED_QUOTE_NONCE=" + nonce);
 
         String quoteB64 = getQuoteFromSubprocess(nonce);
         System.out.println("QUOTE_BASE64=" + quoteB64);
 
-        String encryptedQuote = Base64.getEncoder().encodeToString(encryptData(quoteB64.getBytes(StandardCharsets.UTF_8)));
+        String encryptedQuote =
+            Base64.getEncoder()
+                .encodeToString(encryptData(quoteB64.getBytes(StandardCharsets.UTF_8)));
 
         out.writeUTF(encryptedQuote);
         out.flush();
@@ -492,7 +510,7 @@ public class VerifierRunner {
         String peerDataB64 = in.readUTF();
         System.out.println("PEER_DATA_BASE64=" + peerDataB64);
         if (peerDataB64.trim().isEmpty()) {
-            throw new IllegalArgumentException("No peer data received for handshake");
+          throw new IllegalArgumentException("No peer data received for handshake");
         }
         deriveEncryptionKey(peerDataB64);
 
