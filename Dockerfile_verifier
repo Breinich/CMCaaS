@@ -5,8 +5,6 @@ LABEL description="Docker image for verifying SGX enclaves using Occlum."
 LABEL version="1.0.0"
 
 ENV LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/lib/x86_64-linux-gnu:/opt/occlum/glibc/lib
-ENV SGX_MODE=SIM
-ENV OCCLUM_SIMULATION=true
 
 RUN apt-get update && apt-get install -y strace && apt-get clean
 
