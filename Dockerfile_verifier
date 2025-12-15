@@ -10,6 +10,7 @@ ENV RUST_LOG=trace
 ENV OCCLUM_LOG_LEVEL=trace
 ENV SGX_QPL_LOGGING_LEVEL=debug
 
+RUN apt-get update && apt-get install -y strace && apt-get clean
 
 WORKDIR /app
 
