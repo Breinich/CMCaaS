@@ -8,16 +8,23 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.security.*;
 import java.security.spec.*;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
+import java.util.Optional;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 import java.util.zip.ZipOutputStream;
 import javax.crypto.*;
 import javax.crypto.spec.*;
 
-/** enclave.RobustEnclaveApp */
+/**
+ * VerifierRunner performs secure, E2E encrypted model verification. It listens for commands over a
+ * socket, handles key exchange, decrypts input files, runs the verification process, and encrypts
+ * the output files.
+ */
 public class VerifierRunner {
   private static final String SHARED_DIR = "/host";
   private static final String EXTRACTION_DIR = "/tmp/extracted";
@@ -59,7 +66,6 @@ public class VerifierRunner {
    */
   private static byte[] hkdfSha256(byte[] salt, byte[] ikm, byte[] info, int outputLen)
       throws Exception {
-    // Extract
     Mac hmac = Mac.getInstance("HmacSHA256");
     if (salt == null || salt.length == 0) {
       salt = new byte[32]; // zeros
@@ -68,7 +74,6 @@ public class VerifierRunner {
     hmac.init(saltKey);
     byte[] prk = hmac.doFinal(ikm);
 
-    // Expand
     int hashLen = 32;
     int n = (outputLen + hashLen - 1) / hashLen;
     byte[] okm = new byte[0];
@@ -112,18 +117,17 @@ public class VerifierRunner {
     ka.doPhase(peerPub, true);
     byte[] sharedSecret = ka.generateSecret();
 
-    // HKDF with optional info (context string)
     byte[] info = "enclave-ecdh-aes-256-gcm".getBytes(StandardCharsets.UTF_8);
     byte[] aesKeyBytes = hkdfSha256(null, sharedSecret, info, 32); // AES-256
     return new SecretKeySpec(aesKeyBytes, "AES");
   }
 
   /**
-   * Unpack an encrypted payload and derive an AES key
+   * Unpack the payload and derive an AES key
    *
    * @param encryptedMessageBase64 Base64-encoded encrypted payload
    */
-  private void decryptPayload(String encryptedMessageBase64) throws Exception {
+  private void deriveEncryptionKey(String encryptedMessageBase64) throws Exception {
     byte[] payload = Base64.getDecoder().decode(encryptedMessageBase64);
     ByteBuffer buf = ByteBuffer.wrap(payload);
 
@@ -150,26 +154,31 @@ public class VerifierRunner {
   }
 
   /**
+   * Decrypt data using AES-GCM
+   *
+   * @param encryptedData encrypted data
+   * @return decrypted data
+   */
+  private byte[] decryptData(byte[] encryptedData) throws Exception {
+    if (aesKey == null || nonce == null) {
+      throw new IllegalStateException("Missing encryption context");
+    }
+
+    Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
+    GCMParameterSpec gcmSpec = new GCMParameterSpec(128, nonce);
+    cipher.init(Cipher.DECRYPT_MODE, aesKey, gcmSpec);
+
+    return cipher.doFinal(encryptedData);
+  }
+
+  /**
    * Decrypt uploaded file
    *
    * @param filename file name
    */
   private void decryptFile(String filename) throws Exception {
-    // Ensure decrypted directory exists
     java.nio.file.Files.createDirectories(java.nio.file.Paths.get(DECRYPTED_DIR));
 
-    // Ensure encryption context is present
-    if (aesKey == null || nonce == null) {
-      throw new IllegalStateException(
-          "Missing encryption context: PUBLICKEY header must be sent before VERIFY");
-    }
-
-    // Decrypt AES-GCM
-    Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
-    GCMParameterSpec gcmSpec = new GCMParameterSpec(128, nonce);
-    cipher.init(Cipher.DECRYPT_MODE, aesKey, gcmSpec);
-
-    // Read encrypted file
     Path inPath = Paths.get(SHARED_DIR, filename);
     Path outPath = Paths.get(DECRYPTED_DIR, filename);
 
@@ -178,17 +187,12 @@ public class VerifierRunner {
     }
 
     byte[] encFile = java.nio.file.Files.readAllBytes(inPath);
-    // Decrypt
-    byte[] decFile = cipher.doFinal(encFile);
+    byte[] decFile = decryptData(encFile);
 
-    // Ensure parent directories for the output file exist
     if (outPath.getParent() != null) {
       java.nio.file.Files.createDirectories(outPath.getParent());
     }
-
-    // Write the decrypted file
     java.nio.file.Files.write(outPath, decFile);
-
     System.out.println("Decrypted file: " + filename);
   }
 
@@ -205,7 +209,6 @@ public class VerifierRunner {
   private Path processFile(String filename) {
     System.out.println("Processing file: " + filename);
 
-    // Ensure extraction and output directories exist
     try {
       java.nio.file.Files.createDirectories(java.nio.file.Paths.get(EXTRACTION_DIR));
       java.nio.file.Files.createDirectories(java.nio.file.Paths.get(OUTPUT_DIR));
@@ -213,7 +216,6 @@ public class VerifierRunner {
       throw new RuntimeException("Unable to create working directories: " + e.getMessage(), e);
     }
 
-    // extract the zip file
     try (ZipInputStream zis =
         new ZipInputStream(new FileInputStream(Paths.get(DECRYPTED_DIR, filename).toFile()))) {
       ZipEntry entry;
@@ -222,7 +224,6 @@ public class VerifierRunner {
         if (entry.isDirectory()) {
           outFile.mkdirs();
         } else {
-          // Ensure parent exists
           File parent = outFile.getParentFile();
           if (parent != null && !parent.exists()) parent.mkdirs();
           try (FileOutputStream fos = new FileOutputStream(outFile)) {
@@ -241,7 +242,6 @@ public class VerifierRunner {
 
     System.out.println("Starting verification...");
 
-    // Prepare command arguments for the external verifier
     String inputFilePath = null;
     String propertyFilePath = null;
 
@@ -251,9 +251,9 @@ public class VerifierRunner {
 
     for (File file : files) {
       if (file.isFile()) {
-        if (file.getName().endsWith(".i")) {
+        if (file.getName().endsWith(".i") || file.getName().endsWith(".c")) {
           if (inputFilePath != null) {
-            throw new IllegalArgumentException("Multiple .i input files found");
+            throw new IllegalArgumentException("Multiple input files found");
           }
           inputFilePath = file.getAbsolutePath();
         } else if (file.getName().endsWith(".prp")) {
@@ -265,7 +265,7 @@ public class VerifierRunner {
       }
     }
     if (inputFilePath == null) {
-      throw new IllegalArgumentException("Expected exactly one .i input file, found none");
+      throw new IllegalArgumentException("Expected exactly one .i or .c input file, found none");
     }
 
     File logFile = new File(OUTPUT_DIR, "theta-log.txt");
@@ -278,7 +278,6 @@ public class VerifierRunner {
     }
 
     try {
-      // Build full command: executable + input + properties
       List<String> command = new ArrayList<>();
       command.add("/usr/lib/jvm/java-21-openjdk-amd64/bin/java");
       command.add("-Xss1m");
@@ -307,8 +306,23 @@ public class VerifierRunner {
       pb.redirectErrorStream(true);
       pb.redirectOutput(logFile);
 
+      Instant start = Instant.now();
       Process process = pb.start();
       int exitCode = process.waitFor();
+      Instant end = Instant.now();
+
+      // measure CPU time
+      Optional<Duration> cpuDuration = process.info().totalCpuDuration();
+      cpuDuration.ifPresentOrElse(
+          duration ->
+              System.out.println(
+                  "CPU time used by verification process: " + duration.toMillis() + " ms"),
+          () ->
+              System.out.println(
+                  "CPU time used by verification process: "
+                      + Duration.between(start, end).toMillis()
+                      + " ms (wall-clock time)"));
+
       if (exitCode != 0) {
         System.err.println("Verification process failed with exit code: " + exitCode);
         throw new RuntimeException("Verification process failed with exit code: " + exitCode);
@@ -343,6 +357,24 @@ public class VerifierRunner {
   }
 
   /**
+   * Encrypt data using AES-GCM
+   *
+   * @param data plaintext data
+   * @return encrypted data
+   */
+  private byte[] encryptData(byte[] data) throws Exception {
+    if (aesKey == null || nonce == null) {
+      throw new IllegalStateException("Missing encryption context");
+    }
+
+    Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
+    GCMParameterSpec gcmSpec = new GCMParameterSpec(128, nonce);
+    cipher.init(Cipher.ENCRYPT_MODE, aesKey, gcmSpec);
+
+    return cipher.doFinal(data);
+  }
+
+  /**
    * Encrypt the output file
    *
    * @param resultPath file name
@@ -351,17 +383,11 @@ public class VerifierRunner {
   private String encryptResults(Path resultPath) throws Exception {
 
     byte[] fileBytes = java.nio.file.Files.readAllBytes(resultPath);
+    byte[] encFile = encryptData(fileBytes);
 
-    Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
-    GCMParameterSpec gcmSpec = new GCMParameterSpec(128, nonce);
-    cipher.init(Cipher.ENCRYPT_MODE, aesKey, gcmSpec);
-
-    byte[] encFile = cipher.doFinal(fileBytes);
     String encryptedFilename = "enc_" + resultPath.getFileName().toString();
 
-    // Ensure shared dir exists
     java.nio.file.Files.createDirectories(java.nio.file.Paths.get(SHARED_DIR));
-
     java.nio.file.Files.write(java.nio.file.Paths.get(SHARED_DIR, encryptedFilename), encFile);
 
     System.out.println("Encrypted output file: " + encryptedFilename);
@@ -382,6 +408,33 @@ public class VerifierRunner {
     Path resultFilePath = processFile(filename);
 
     return encryptResults(resultFilePath);
+  }
+
+  /**
+   * Get quote from subprocess
+   *
+   * @param nonce nonce provided by the client
+   * @return b64 encoded quote
+   * @throws Exception on error
+   */
+  private String getQuoteFromSubprocess(String nonce) throws Exception {
+    ProcessBuilder builder = new ProcessBuilder("/bin/dcap_attestation", nonce);
+    Process process = builder.start();
+
+    BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
+    StringBuilder output = new StringBuilder();
+    String line;
+    while ((line = reader.readLine()) != null) {
+      output.append(line);
+    }
+
+    int exitCode = process.waitFor();
+    if (exitCode != 0) {
+      throw new RuntimeException(
+          "Quote generation failed. Exit code: " + exitCode + ". Output: " + output);
+    }
+
+    return output.toString().trim();
   }
 
   public VerifierRunner(int port) throws Exception {
@@ -420,25 +473,55 @@ public class VerifierRunner {
       case "init":
         System.out.println("INIT_COMMAND_RECEIVED");
 
-        // Step 1: send server public key first
         String pubB64 = exportPublicKey();
         out.writeUTF(pubB64);
         out.flush();
         System.out.println("PUBLIC_KEY_BASE64=" + pubB64);
         break;
+
+      case "quote":
+        System.out.println("QUOTE_COMMAND_RECEIVED");
+
+        String enctyptedNonce = in.readUTF();
+        System.out.println("ENCRYPTED_QUOTE_NONCE=" + enctyptedNonce);
+        if (enctyptedNonce.trim().isEmpty()) {
+          throw new IllegalArgumentException("No encrypted nonce received for quote");
+        }
+
+        String nonce =
+            new String(
+                decryptData(Base64.getDecoder().decode(enctyptedNonce)), StandardCharsets.UTF_8);
+        System.out.println("DECRYPTED_QUOTE_NONCE=" + nonce);
+
+        String quoteB64 = getQuoteFromSubprocess(nonce);
+        System.out.println("QUOTE_BASE64=" + quoteB64);
+
+        String encryptedQuote =
+            Base64.getEncoder()
+                .encodeToString(encryptData(quoteB64.getBytes(StandardCharsets.UTF_8)));
+
+        out.writeUTF(encryptedQuote);
+        out.flush();
+        break;
+
+      case "handshake":
+        System.out.println("HANDSHAKE_COMMAND_RECEIVED");
+
+        String peerDataB64 = in.readUTF();
+        System.out.println("PEER_DATA_BASE64=" + peerDataB64);
+        if (peerDataB64.trim().isEmpty()) {
+          throw new IllegalArgumentException("No peer data received for handshake");
+        }
+        deriveEncryptionKey(peerDataB64);
+
+        out.writeUTF("OK");
+        out.flush();
+        System.out.println("HANDSHAKE_COMPLETED");
+        break;
+
       case "process":
         System.out.println("PROCESS_COMMAND_RECEIVED");
 
-        // Step 2: receive encrypted payload from the client, the client's public key and the nonce
-        String payloadB64 = in.readUTF();
-        System.out.println("ENCRYPTED_PAYLOAD=" + payloadB64);
-        if (payloadB64.trim().isEmpty()) {
-          throw new IllegalArgumentException("No encrypted payload received");
-        }
-        decryptPayload(payloadB64);
-
-        // Now AES key and nonce are available
-        // Step 3: receive filename to process
         String filename = in.readUTF();
         System.out.println("FILENAME=" + filename);
         if (filename.trim().isEmpty()) {
@@ -446,12 +529,12 @@ public class VerifierRunner {
         }
         String encrypted_result_name = verifyModel(filename);
 
-        // Step 4: send back the encrypted output filename
         out.writeUTF(encrypted_result_name);
         out.flush();
         System.out.println("ENCRYPTED_OUTPUT_FILENAME=" + encrypted_result_name);
         stop = true;
         break;
+
       case "stop":
         System.out.println("STOP_COMMAND_RECEIVED");
         stop = true;

@@ -15,9 +15,13 @@ import java.util.*;
 import javax.crypto.*;
 import javax.crypto.spec.*;
 
+/**
+ * RemoteClient communicates with the remote CMCAAS-server to perform enclave attestation and data
+ * verification.
+ */
 public class RemoteClient {
   private SecretKey aesKey;
-  private byte[] nonce;
+  private byte[] nonceBinary;
 
   /**
    * HKDF-SHA256 implementation
@@ -85,7 +89,13 @@ public class RemoteClient {
     return new SecretKeySpec(aesKeyBytes, "AES");
   }
 
-  public String encryptKeyMaterials(PublicKey enclavePub) throws Exception {
+  /**
+   * Generate key materials to send to the enclave
+   *
+   * @param enclavePub Enclave public key
+   * @return Base64-encoded key materials
+   */
+  private String generateKeyMaterials(PublicKey enclavePub) throws Exception {
 
     // Generate ephemeral client keypair
     KeyPairGenerator kpg = KeyPairGenerator.getInstance("EC");
@@ -96,21 +106,28 @@ public class RemoteClient {
 
     // Derive an AES key and generate nonce
     aesKey = deriveAesKey(clientPriv, enclavePub);
-    nonce = new byte[12];
-    SecureRandom.getInstanceStrong().nextBytes(nonce);
+    nonceBinary = new byte[12];
+    SecureRandom.getInstanceStrong().nextBytes(nonceBinary);
 
     byte[] clientPubBytes = clientPub.getEncoded();
 
     // Frame: [4 clientPubLen][clientPub][4 nonceLen][nonce]
-    ByteBuffer buf = ByteBuffer.allocate(4 + clientPubBytes.length + 4 + nonce.length);
+    ByteBuffer buf = ByteBuffer.allocate(4 + clientPubBytes.length + 4 + nonceBinary.length);
     buf.putInt(clientPubBytes.length);
     buf.put(clientPubBytes);
-    buf.putInt(nonce.length);
-    buf.put(nonce);
+    buf.putInt(nonceBinary.length);
+    buf.put(nonceBinary);
 
     return Base64.getEncoder().encodeToString(buf.array());
   }
 
+  /**
+   * Create a multipart/form-data body publisher
+   *
+   * @param data The form data
+   * @param boundary The boundary string
+   * @return BodyPublisher for the multipart data
+   */
   private static HttpRequest.BodyPublisher ofMultipartData(
       Map<Object, Object> data, String boundary) throws Exception {
     var byteArrays = new java.util.ArrayList<byte[]>();
@@ -151,14 +168,15 @@ public class RemoteClient {
     return HttpRequest.BodyPublishers.ofByteArrays(byteArrays);
   }
 
-  public void run(String host, int port, String username, String password, String filename) {
-    HttpClient httpClient = HttpClient.newHttpClient();
-    String credentials =
-        Base64.getEncoder()
-            .encodeToString((username + ":" + password).getBytes(StandardCharsets.UTF_8));
-
-    final String baseUrl = "http://" + host + ":" + port + "/verifier";
-
+  /**
+   * Register a new user
+   *
+   * @param username The username of the new user
+   * @param password The password of the new user
+   * @param baseUrl The base URL of the server
+   * @param httpClient The HTTP client to use for the request
+   */
+  private void register(String username, String password, String baseUrl, HttpClient httpClient) {
     try {
       String jsonPayload =
           String.format("{\"username\":\"%s\",\"password\":\"%s\"}", username, password);
@@ -180,11 +198,18 @@ public class RemoteClient {
     } catch (Exception e) {
       // Ignore registration errors (e.g. user already exists)
     }
+  }
 
-    String enclavePubB64;
-    PublicKey enclavePub;
+  /**
+   * Initialize connection and get enclave public key
+   *
+   * @param baseUrl The base URL of the server
+   * @param credentials The credentials for authentication
+   * @param httpClient The HTTP client to use for the request
+   * @return The enclave public key
+   */
+  private PublicKey init(String baseUrl, String credentials, HttpClient httpClient) {
     try {
-      // Authenticate and get enclave public key
       java.net.http.HttpRequest initRequest =
           java.net.http.HttpRequest.newBuilder()
               .uri(new java.net.URI(baseUrl + "/init"))
@@ -201,21 +226,185 @@ public class RemoteClient {
       java.net.http.HttpResponse<String> initResponse =
           httpClient.send(initRequest, java.net.http.HttpResponse.BodyHandlers.ofString());
 
-      enclavePubB64 = initResponse.body();
+      String enclavePubB64 = initResponse.body();
 
       System.out.println("Received Enclave Public Key: " + enclavePubB64);
 
       byte[] enclavePubBytes = Base64.getDecoder().decode(enclavePubB64);
       KeyFactory kf = KeyFactory.getInstance("EC");
-      enclavePub = kf.generatePublic(new X509EncodedKeySpec(enclavePubBytes));
+      return kf.generatePublic(new X509EncodedKeySpec(enclavePubBytes));
     } catch (Exception e) {
       throw new RuntimeException("Failed to initialize connection: " + e.getMessage(), e);
     }
+  }
 
-    Path encFilePath;
+  /**
+   * Shake hands with the enclave to establish shared keys
+   *
+   * @param baseUrl The base URL of the server
+   * @param credentials The credentials for authentication
+   * @param httpClient The HTTP client to use for the request
+   * @param enclavePub The enclave public key
+   * @param enclavePubB64 The Base64-encoded enclave public key
+   */
+  private void shakeHands(
+      String baseUrl,
+      String credentials,
+      HttpClient httpClient,
+      PublicKey enclavePub,
+      String enclavePubB64) {
     String payloadB64;
     try {
-      payloadB64 = encryptKeyMaterials(enclavePub);
+      payloadB64 = generateKeyMaterials(enclavePub);
+    } catch (Exception e) {
+      throw new RuntimeException("Failed to generate key materials: " + e.getMessage(), e);
+    }
+
+    try {
+      Map<Object, Object> data = new HashMap<>();
+      data.put("clientData", payloadB64);
+      data.put("publicKey", enclavePubB64);
+      String boundary = "----WebKitFormBoundary" + System.currentTimeMillis();
+
+      java.net.http.HttpRequest agreeRequest =
+          java.net.http.HttpRequest.newBuilder()
+              .uri(new java.net.URI(baseUrl + "/agree"))
+              .header("Authorization", "Basic " + credentials)
+              .header("Content-Type", "multipart/form-data; boundary=" + boundary)
+              .POST(ofMultipartData(data, boundary))
+              .build();
+
+      java.net.http.HttpResponse<String> agreeResponse =
+          httpClient.send(agreeRequest, java.net.http.HttpResponse.BodyHandlers.ofString());
+      if (agreeResponse.statusCode() != 200) {
+        throw new RuntimeException("Failed to shake hands with enclave: " + agreeResponse.body());
+      }
+
+      System.out.println("Successfully shook hands with the enclave.");
+    } catch (Exception e) {
+      throw new RuntimeException("Failed to shake hands: " + e.getMessage(), e);
+    }
+  }
+
+  /**
+   * Verify the enclave quote using a Docker container
+   *
+   * @param quoteB64 The Base64-encoded quote
+   * @param nonce The nonce used for the quote
+   * @throws IOException
+   * @throws InterruptedException
+   */
+  private void verifyQuote(String quoteB64, String nonce) throws IOException, InterruptedException {
+    ProcessBuilder builder =
+        new ProcessBuilder(
+            "docker",
+            "run",
+            "--device",
+            "/dev/sgx_enclave",
+            "--device",
+            "/dev/sgx_provision",
+            "--rm",
+            "cmcaas-attester:latest",
+            quoteB64,
+            nonce);
+    ;
+    builder.redirectErrorStream(true);
+
+    Process process = builder.start();
+
+    List<String> lines = new ArrayList<>();
+    try (BufferedReader reader =
+        new BufferedReader(new InputStreamReader(process.getInputStream()))) {
+      String line;
+      while ((line = reader.readLine()) != null) {
+        lines.add(line);
+      }
+    } catch (Exception e) {
+      throw new RuntimeException("Error reading process output", e);
+    }
+
+    int exitCode = process.waitFor();
+
+    if (exitCode == 0) {
+      System.out.println("Enclave quote verified successfully.");
+    } else {
+      String errorOutput = lines.isEmpty() ? "No output captured." : String.join("\n", lines);
+
+      System.err.println("Verification Failed (Exit Code " + exitCode + "):\n" + errorOutput);
+      throw new RuntimeException(
+          "Failed to verify quote. Exit Code: " + exitCode + ". Output:\n" + errorOutput);
+    }
+  }
+
+  /**
+   * Attest the enclave
+   *
+   * @param baseUrl The base URL of the enclave
+   * @param credentials The credentials for authentication
+   * @param httpClient The HTTP client to use for requests
+   * @param enclavePubB64 The Base64-encoded public key of the enclave
+   */
+  private void attestEnclave(
+      String baseUrl, String credentials, HttpClient httpClient, String enclavePubB64) {
+    byte[] nonceBinary = new byte[24];
+    try {
+      SecureRandom.getInstanceStrong().nextBytes(nonceBinary);
+    } catch (NoSuchAlgorithmException e) {
+      throw new RuntimeException("Failed to generate nonce: " + e.getMessage(), e);
+    }
+    String nonce = Base64.getEncoder().encodeToString(nonceBinary);
+
+    byte[] encryptedNonce = encryptData(nonce.getBytes());
+    String encryptedNonceB64 = Base64.getEncoder().encodeToString(encryptedNonce);
+
+    try {
+      Map<Object, Object> data = new HashMap<>();
+      data.put("publicKey", enclavePubB64);
+      data.put("encryptedNonce", encryptedNonceB64);
+      String boundary = "----WebKitFormBoundary" + System.currentTimeMillis();
+
+      java.net.http.HttpRequest quoteRequest =
+          java.net.http.HttpRequest.newBuilder()
+              .uri(new java.net.URI(baseUrl + "/quote"))
+              .header("Authorization", "Basic " + credentials)
+              .header("Content-Type", "multipart/form-data; boundary=" + boundary)
+              .POST(ofMultipartData(data, boundary))
+              .build();
+
+      java.net.http.HttpResponse<String> quoteResponse =
+          httpClient.send(quoteRequest, java.net.http.HttpResponse.BodyHandlers.ofString());
+
+      if (quoteResponse.statusCode() != 200) {
+        throw new RuntimeException("Failed to get enclave quote: " + quoteResponse.body());
+      }
+      String encryptedQuoteB64 = quoteResponse.body();
+      String decryptedQuoteB64 =
+          new String(
+              decryptData(Base64.getDecoder().decode(encryptedQuoteB64)), StandardCharsets.UTF_8);
+
+      verifyQuote(decryptedQuoteB64, nonce);
+    } catch (Exception e) {
+      throw new RuntimeException("Failed to attest enclave: " + e.getMessage(), e);
+    }
+  }
+
+  /**
+   * Start the verification job
+   *
+   * @param filename The name of the file to verify
+   * @param baseUrl The base URL of the enclave
+   * @param credentials The credentials for authentication
+   * @param httpClient The HTTP client to use for requests
+   * @param enclavePubB64 The Base64-encoded public key of the enclave
+   */
+  private void startVerificationJob(
+      String filename,
+      String baseUrl,
+      String credentials,
+      HttpClient httpClient,
+      String enclavePubB64) {
+    Path encFilePath;
+    try {
       encFilePath = Paths.get(encryptFile(filename));
     } catch (Exception e) {
       throw new RuntimeException("Failed to encrypt payload: " + e.getMessage(), e);
@@ -226,11 +415,9 @@ public class RemoteClient {
 
       Map<Object, Object> data = new HashMap<>();
       data.put("file", encFilePath);
-      data.put("clientData", payloadB64);
       data.put("publicKey", enclavePubB64);
       String boundary = "----WebKitFormBoundary" + System.currentTimeMillis();
 
-      // start verification
       response =
           httpClient.send(
               java.net.http.HttpRequest.newBuilder()
@@ -247,16 +434,31 @@ public class RemoteClient {
     } catch (Exception e) {
       throw new RuntimeException("Failed to send verification request: " + e.getMessage(), e);
     }
+  }
 
-    System.out.println("Verification job started. Polling for results...");
-
+  /**
+   * Poll for results
+   *
+   * @param filename The name of the file to verify
+   * @param baseUrl The base URL of the enclave
+   * @param credentials The credentials for authentication
+   * @param httpClient The HTTP client to use for requests
+   * @param enclavePubB64 The Base64-encoded public key of the enclave
+   * @return The path to the output file
+   */
+  private String pollForResults(
+      String filename,
+      String baseUrl,
+      String credentials,
+      HttpClient httpClient,
+      String enclavePubB64) {
     HttpResponse<byte[]> pollResp;
     boolean completed = false;
     Path outputFile = Paths.get("enc_response_" + new File(filename).getName());
 
     try {
       while (!completed) {
-        Thread.sleep(10000); // wait 10 seconds between polls
+        Thread.sleep(10000);
 
         HttpRequest pollRequest =
             HttpRequest.newBuilder()
@@ -283,57 +485,121 @@ public class RemoteClient {
                   + new String(pollResp.body(), StandardCharsets.UTF_8));
         }
       }
+      return outputFile.toString();
     } catch (Exception e) {
       System.err.println("Failed to download results: " + e.getMessage());
+      throw new RuntimeException("Error while polling for results: " + e.getMessage(), e);
     }
+  }
+
+  /**
+   * Run the remote client
+   *
+   * @param host The hostname or IP address of the enclave
+   * @param port The port number of the enclave
+   * @param username The username for authentication
+   * @param password The password for authentication
+   * @param filename The name of the file to verify
+   */
+  public void run(String host, int port, String username, String password, String filename) {
+    HttpClient httpClient = HttpClient.newHttpClient();
+    String credentials =
+        Base64.getEncoder()
+            .encodeToString((username + ":" + password).getBytes(StandardCharsets.UTF_8));
+
+    final String baseUrl = "http://" + host + ":" + port + "/verifier";
+
+    register(username, password, baseUrl, httpClient);
+
+    PublicKey enclavePub = init(baseUrl, credentials, httpClient);
+    String enclavePubB64 = Base64.getEncoder().encodeToString(enclavePub.getEncoded());
+
+    shakeHands(baseUrl, credentials, httpClient, enclavePub, enclavePubB64);
+
+    String skipAttestation = System.getenv("SKIP_ATTESTATION");
+    if (skipAttestation == null || !skipAttestation.equals("1")) {
+      attestEnclave(baseUrl, credentials, httpClient, enclavePubB64);
+    }
+
+    startVerificationJob(filename, baseUrl, credentials, httpClient, enclavePubB64);
+
+    System.out.println("Verification job started. Polling for results...");
+
+    String outputFile = pollForResults(filename, baseUrl, credentials, httpClient, enclavePubB64);
 
     try {
       // Decrypt the response file
-      String decryptedFilename = decryptFile(outputFile.toString());
+      String decryptedFilename = decryptFile(outputFile);
       System.out.println("Decrypted result from enclave: " + decryptedFilename);
     } catch (Exception e) {
       throw new RuntimeException("Error during run: " + e.getMessage(), e);
     }
   }
 
+  /**
+   * Decrypt data with AES-GCM
+   *
+   * @param encData The encrypted data
+   * @return The decrypted data
+   */
+  private byte[] decryptData(byte[] encData) {
+    try {
+      Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
+      GCMParameterSpec gcmSpec = new GCMParameterSpec(128, nonceBinary);
+      cipher.init(Cipher.DECRYPT_MODE, aesKey, gcmSpec);
+      return cipher.doFinal(encData);
+    } catch (Exception e) {
+      throw new RuntimeException("Failed to decrypt data: " + e.getMessage(), e);
+    }
+  }
+
+  /**
+   * Decrypt a file
+   *
+   * @param filename The name of the file to decrypt
+   * @return The name of the decrypted file
+   */
   private String decryptFile(String filename) {
     try {
-      // Read file
       byte[] fileData = Files.readAllBytes(Paths.get(filename));
+      byte[] decData = decryptData(fileData);
 
-      // Decrypt with AES-GCM
-      Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
-      GCMParameterSpec gcmSpec = new GCMParameterSpec(128, nonce);
-      cipher.init(Cipher.DECRYPT_MODE, aesKey, gcmSpec);
-      byte[] decData = cipher.doFinal(fileData);
-
-      // Save the decrypted file
       String decFilename = "dec_" + new File(filename).getName();
       Files.write(Paths.get(decFilename), decData);
       return decFilename;
-    } catch (IOException
-        | NoSuchAlgorithmException
-        | NoSuchPaddingException
-        | InvalidKeyException
-        | InvalidAlgorithmParameterException
-        | IllegalBlockSizeException
-        | BadPaddingException e) {
+    } catch (IOException e) {
       throw new RuntimeException("Failed to decrypt file: " + e.getMessage(), e);
     }
   }
 
+  /**
+   * Encrypt data with AES-GCM
+   *
+   * @param data The data to encrypt
+   * @return The encrypted data
+   */
+  private byte[] encryptData(byte[] data) {
+    try {
+      Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
+      GCMParameterSpec gcmSpec = new GCMParameterSpec(128, nonceBinary);
+      cipher.init(Cipher.ENCRYPT_MODE, aesKey, gcmSpec);
+      return cipher.doFinal(data);
+    } catch (Exception e) {
+      throw new RuntimeException("Failed to encrypt data: " + e.getMessage(), e);
+    }
+  }
+
+  /**
+   * Encrypt a file
+   *
+   * @param filename The name of the file to encrypt
+   * @return The name of the encrypted file
+   */
   private String encryptFile(String filename) {
     try {
-      // Read file
       byte[] fileData = Files.readAllBytes(Paths.get(filename));
+      byte[] encData = encryptData(fileData);
 
-      // Encrypt with AES-GCM
-      Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
-      GCMParameterSpec gcmSpec = new GCMParameterSpec(128, nonce);
-      cipher.init(Cipher.ENCRYPT_MODE, aesKey, gcmSpec);
-      byte[] encData = cipher.doFinal(fileData);
-
-      // Save the encrypted file
       String encFilename = "enc_" + new File(filename).getName();
       Files.write(Paths.get(encFilename), encData);
       return encFilename;

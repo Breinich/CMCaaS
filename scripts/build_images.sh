@@ -1,15 +1,21 @@
 #!/usr/bin/env bash
 set -e
 
-IMAGE_NAME="cmcaas-server"
+SERVER_IMAGE="cmcaas-server"
+ATTESTER_IMAGE="cmcaas-attester"
 
 echo "[+] Building CMCaaS Docker image..."
-docker build -t "$IMAGE_NAME:latest" .
+docker build -t "$SERVER_IMAGE:latest" .
 
 echo "[+] Building CMCaaS Simulation Docker image..."
-docker build -f Dockerfile_sim -t "$IMAGE_NAME:sim" .
+docker build -f Dockerfile_sim -t "$SERVER_IMAGE:sim" .
+
+echo "[+] Building enclave verifier Docker image..."
+docker build -f Dockerfile_verifier -t "$ATTESTER_IMAGE:latest" .
 
 echo "[+] CMCaaS Docker images built successfully:"
-echo "    - $IMAGE_NAME:latest"
-echo "    - $IMAGE_NAME:sim"
+echo "    - $SERVER_IMAGE:latest"
+echo "    - $SERVER_IMAGE:sim"
+echo "    - $ATTESTER_IMAGE:latest"
+
 

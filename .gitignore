@@ -32,3 +32,5 @@ bin/
 src/**/*.i
 src/**/*.prp
 /**/*.class
+.venv
+venv

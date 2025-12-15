@@ -1,7 +1,7 @@
 includes:
   - base.yaml
+
 targets:
-  # copy VerifierRunner class file
   - target: /
     copy:
       - files:
@@ -17,3 +17,8 @@ targets:
       - files:
           - /opt/occlum/toolchains/bash/glibc/bash
           - /usr/bin/python3
+          - /app/src/enclave/dcap_attestation
+  - target: /opt/occlum/glibc/lib
+    copy:
+      - files:
+          - /opt/occlum/toolchains/dcap_lib/glibc/libocclum_dcap.so.0.1.0
