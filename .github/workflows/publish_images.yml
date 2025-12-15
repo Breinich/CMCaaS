@@ -23,7 +23,7 @@ jobs:
       - name: Compute lowercased image name
         id: set-image
         run: |
-          IMAGE="${{ github.repository }}-server"
+          IMAGE="${{ github.repository }}"
           echo "image_name=$(echo $IMAGE | tr '[:upper:]' '[:lower:]')" >> $GITHUB_OUTPUT
 
       - name: Install cosign
@@ -49,8 +49,8 @@ jobs:
           file: Dockerfile
           push: ${{ github.event_name != 'pull_request' }}
           tags: |
-            ${{ env.REGISTRY }}/${{ steps.set-image.outputs.image_name }}:latest
-            ${{ env.REGISTRY }}/${{ steps.set-image.outputs.image_name }}:${{ github.sha }}
+            ${{ env.REGISTRY }}/${{ steps.set-image.outputs.image_name }}-server:latest
+            ${{ env.REGISTRY }}/${{ steps.set-image.outputs.image_name }}-server:${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -62,8 +62,21 @@ jobs:
           file: Dockerfile_sim
           push: ${{ github.event_name != 'pull_request' }}
           tags: |
-            ${{ env.REGISTRY }}/${{ steps.set-image.outputs.image_name }}:sim
-            ${{ env.REGISTRY }}/${{ steps.set-image.outputs.image_name }}:sim-${{ github.sha }}
+            ${{ env.REGISTRY }}/${{ steps.set-image.outputs.image_name }}-server:sim
+            ${{ env.REGISTRY }}/${{ steps.set-image.outputs.image_name }}-server:sim-${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build and push SGX attestation Docker image
+        id: build-and-push-attestation
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile_verifier
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: |
+            ${{ env.REGISTRY }}/${{ steps.set-image.outputs.image_name }}-attester:latest
+            ${{ env.REGISTRY }}/${{ steps.set-image.outputs.image_name }}-attester:${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -83,4 +96,13 @@ jobs:
             ${{ env.REGISTRY }}/${{ steps.set-image.outputs.image_name }}:sim
             ${{ env.REGISTRY }}/${{ steps.set-image.outputs.image_name }}:sim-${{ github.sha }}
           DIGEST: ${{ steps.build-and-push-sim.outputs.digest }}
+        run: echo "${TAGS}" | xargs -I {} cosign sign --yes {}@${DIGEST}
+
+      - name: Sign SGX attestation Docker images with cosign
+        if: github.event_name != 'pull_request'
+        env:
+          TAGS: |
+            ${{ env.REGISTRY }}/${{ steps.set-image.outputs.image_name }}-attester:latest
+            ${{ env.REGISTRY }}/${{ steps.set-image.outputs.image_name }}-attester:${{ github.sha }}
+          DIGEST: ${{ steps.build-and-push-attestation.outputs.digest }}
         run: echo "${TAGS}" | xargs -I {} cosign sign --yes {}@${DIGEST}
