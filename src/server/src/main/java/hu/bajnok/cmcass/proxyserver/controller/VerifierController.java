@@ -88,7 +88,7 @@ public class VerifierController {
     @PostMapping(value = "/process", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<String> processEncryptedFile(
             @RequestParam("file") MultipartFile file,
-            @RequestParam("processKey") String processKey,
+            @RequestParam("publicKey") String processKey,
             @AuthenticationPrincipal UserDetails user) {
         String username = (user != null) ? user.getUsername() : null;
         if (username == null) {
