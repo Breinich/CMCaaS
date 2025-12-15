@@ -14,6 +14,10 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 import java.util.zip.ZipOutputStream;
 
+/**
+ * A simple server to communicate with a client to measure verification time outside of enclave in a similar
+ * environment.
+ */
 public class BareRunner {
 
     private static final String INPUT_DIR = "/tmp/input";
@@ -21,7 +25,11 @@ public class BareRunner {
     private static final String OUTPUT_DIR = "/tmp/output";
     private boolean stop = false;
 
-
+    /**
+     * Sanitize a file name by removing invalid characters
+     * @param filename The file name to sanitize
+     * @return The sanitized file name
+     */
     private static String sanitizeFilename(String filename) {
         return filename.replaceAll("[^a-zA-Z0-9._-]", "_");
     }
@@ -35,9 +43,7 @@ public class BareRunner {
     private Path processFile(String filename) {
         System.out.println("Processing file: " + filename);
 
-        // Ensure extraction and output directories exist
         try {
-            // empty the extraction directory using rm -rf
             ProcessBuilder pb = new ProcessBuilder("rm", "-rf", EXTRACTION_DIR, OUTPUT_DIR);
             pb.inheritIO();
             Process process = pb.start();
@@ -51,7 +57,6 @@ public class BareRunner {
             throw new RuntimeException(e);
         }
 
-        // extract the zip file
         try (ZipInputStream zis =
                      new ZipInputStream(new FileInputStream(Paths.get(INPUT_DIR, filename).toFile()))) {
             ZipEntry entry;
@@ -60,7 +65,6 @@ public class BareRunner {
                 if (entry.isDirectory()) {
                     outFile.mkdirs();
                 } else {
-                    // Ensure parent exists
                     File parent = outFile.getParentFile();
                     if (parent != null && !parent.exists()) parent.mkdirs();
                     try (FileOutputStream fos = new FileOutputStream(outFile)) {
@@ -79,7 +83,6 @@ public class BareRunner {
 
         System.out.println("Starting verification...");
 
-        // Prepare command arguments for the external verifier
         String inputFilePath = null;
         String propertyFilePath = null;
 
@@ -116,7 +119,6 @@ public class BareRunner {
         }
 
         try {
-            // Build full command: executable + input + properties
             List<String> command = new ArrayList<>();
             command.add("/usr/lib/jvm/java-21-openjdk-amd64/bin/java");
             command.add("-Xss1m");
@@ -244,7 +246,6 @@ public class BareRunner {
                 }
                 String result_name = verifyModel(filename);
 
-                // Step 4: send back the output filename
                 out.writeUTF(result_name);
                 out.flush();
                 System.out.println("OUTPUT_FILENAME=" + result_name);

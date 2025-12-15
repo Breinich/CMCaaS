@@ -15,13 +15,15 @@ import java.util.*;
 import javax.crypto.*;
 import javax.crypto.spec.*;
 
+/**
+ * RemoteClient communicates with the remote CMCAAS-server to perform enclave attestation and data verification.
+ */
 public class RemoteClient {
     private SecretKey aesKey;
     private byte[] nonceBinary;
 
     /**
      * HKDF-SHA256 implementation
-     *
      * @param salt optional salt
      * @param ikm input keying material
      * @param info optional context and application-specific information
@@ -55,7 +57,6 @@ public class RemoteClient {
 
     /**
      * Concatenate two byte arrays
-     *
      * @param a first byte array
      * @param b second byte array
      * @return concatenated byte array
@@ -69,7 +70,6 @@ public class RemoteClient {
 
     /**
      * Derive an AES key from ECDH shared secret
-     *
      * @param priv Private key
      * @param peerPub Public key
      * @return Derived AES key
@@ -85,7 +85,12 @@ public class RemoteClient {
         return new SecretKeySpec(aesKeyBytes, "AES");
     }
 
-    public String generateKeyMaterials(PublicKey enclavePub) throws Exception {
+    /**
+     * Generate key materials to send to the enclave
+     * @param enclavePub Enclave public key
+     * @return Base64-encoded key materials
+     */
+    private String generateKeyMaterials(PublicKey enclavePub) throws Exception {
 
         // Generate ephemeral client keypair
         KeyPairGenerator kpg = KeyPairGenerator.getInstance("EC");
@@ -111,6 +116,12 @@ public class RemoteClient {
         return Base64.getEncoder().encodeToString(buf.array());
     }
 
+    /**
+     * Create a multipart/form-data body publisher
+     * @param data The form data
+     * @param boundary The boundary string
+     * @return BodyPublisher for the multipart data
+     */
     private static HttpRequest.BodyPublisher ofMultipartData(
             Map<Object, Object> data, String boundary) throws Exception {
         var byteArrays = new java.util.ArrayList<byte[]>();
@@ -191,7 +202,6 @@ public class RemoteClient {
      */
     private PublicKey init(String baseUrl, String credentials, HttpClient httpClient) {
         try {
-            // Authenticate and get enclave public key
             java.net.http.HttpRequest initRequest =
                     java.net.http.HttpRequest.newBuilder()
                             .uri(new java.net.URI(baseUrl + "/init"))
@@ -220,6 +230,14 @@ public class RemoteClient {
         }
     }
 
+    /**
+     * Shake hands with the enclave to establish shared keys
+     * @param baseUrl The base URL of the server
+     * @param credentials The credentials for authentication
+     * @param httpClient The HTTP client to use for the request
+     * @param enclavePub The enclave public key
+     * @param enclavePubB64 The Base64-encoded enclave public key
+     */
     private void shakeHands(String baseUrl, String credentials, HttpClient httpClient, PublicKey enclavePub,
                             String enclavePubB64) {
         String payloadB64;
@@ -256,22 +274,24 @@ public class RemoteClient {
         }
     }
 
+    /**
+     * Verify the enclave quote using a Docker container
+     * @param quoteB64 The Base64-encoded quote
+     * @param nonce The nonce used for the quote
+     * @throws IOException
+     * @throws InterruptedException
+     */
     private void verifyQuote(String quoteB64, String nonce) throws IOException, InterruptedException {
-        File logFile = new File("docker_verifier_output.log");
-
-        ProcessBuilder builder = new ProcessBuilder("docker", "run", "--device", "/dev/sgx_enclave", "--device", "/dev/sgx_provision", "--rm", "cmcaas-verifier:latest", quoteB64, nonce);;
+        ProcessBuilder builder = new ProcessBuilder("docker", "run", "--device", "/dev/sgx_enclave", "--device", "/dev/sgx_provision", "--rm", "cmcaas-attester:latest", quoteB64, nonce);;
         builder.redirectErrorStream(true);
 
         Process process = builder.start();
 
         List<String> lines = new ArrayList<>();
-        try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
-             BufferedWriter fileWriter = new BufferedWriter(new FileWriter(logFile))) {
+        try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
             String line;
             while ((line = reader.readLine()) != null) {
                 lines.add(line);
-                fileWriter.write(line);
-                fileWriter.newLine();
             }
         } catch (Exception e) {
             throw new RuntimeException("Error reading process output", e);
@@ -290,6 +310,13 @@ public class RemoteClient {
         }
     }
 
+    /**
+     * Attest the enclave
+     * @param baseUrl The base URL of the enclave
+     * @param credentials The credentials for authentication
+     * @param httpClient The HTTP client to use for requests
+     * @param enclavePubB64 The Base64-encoded public key of the enclave
+     */
     private void attestEnclave(String baseUrl, String credentials, HttpClient httpClient, String enclavePubB64) {
         byte[] nonceBinary = new byte[24];
         try {
@@ -298,8 +325,6 @@ public class RemoteClient {
             throw new RuntimeException("Failed to generate nonce: " + e.getMessage(), e);
         }
         String nonce = Base64.getEncoder().encodeToString(nonceBinary);
-
-        System.out.println("Generated Nonce: " + nonce);
 
         byte[] encryptedNonce = encryptData(nonce.getBytes());
         String encryptedNonceB64 = Base64.getEncoder().encodeToString(encryptedNonce);
@@ -330,10 +355,18 @@ public class RemoteClient {
             verifyQuote(decryptedQuoteB64, nonce);
         }
         catch (Exception e) {
-            throw new RuntimeException("Failed to verify enclave: " + e.getMessage(), e);
+            throw new RuntimeException("Failed to attest enclave: " + e.getMessage(), e);
         }
     }
 
+    /**
+     * Start the verification job
+     * @param filename The name of the file to verify
+     * @param baseUrl The base URL of the enclave
+     * @param credentials The credentials for authentication
+     * @param httpClient The HTTP client to use for requests
+     * @param enclavePubB64 The Base64-encoded public key of the enclave
+     */
     private void startVerificationJob(String filename, String baseUrl, String credentials, HttpClient httpClient, String enclavePubB64) {
         Path encFilePath;
         try {
@@ -350,7 +383,6 @@ public class RemoteClient {
             data.put("publicKey", enclavePubB64);
             String boundary = "----WebKitFormBoundary" + System.currentTimeMillis();
 
-            // start verification
             response =
                     httpClient.send(
                             java.net.http.HttpRequest.newBuilder()
@@ -369,6 +401,15 @@ public class RemoteClient {
         }
     }
 
+    /**
+     * Poll for results
+     * @param filename The name of the file to verify
+     * @param baseUrl The base URL of the enclave
+     * @param credentials The credentials for authentication
+     * @param httpClient The HTTP client to use for requests
+     * @param enclavePubB64 The Base64-encoded public key of the enclave
+     * @return The path to the output file
+     */
     private String pollForResults(String filename, String baseUrl, String credentials, HttpClient httpClient, String enclavePubB64) {
         HttpResponse<byte[]> pollResp;
         boolean completed = false;
@@ -376,7 +417,7 @@ public class RemoteClient {
 
         try {
             while (!completed) {
-                Thread.sleep(10000); // wait 10 seconds between polls
+                Thread.sleep(10000);
 
                 HttpRequest pollRequest =
                         HttpRequest.newBuilder()
@@ -410,6 +451,14 @@ public class RemoteClient {
         }
     }
 
+    /**
+     * Run the remote client
+     * @param host The hostname or IP address of the enclave
+     * @param port The port number of the enclave
+     * @param username The username for authentication
+     * @param password The password for authentication
+     * @param filename The name of the file to verify
+     */
     public void run(String host, int port, String username, String password, String filename) {
         HttpClient httpClient = HttpClient.newHttpClient();
         String credentials =
@@ -495,6 +544,11 @@ public class RemoteClient {
         }
     }
 
+    /**
+     * Encrypt a file
+     * @param filename The name of the file to encrypt
+     * @return The name of the encrypted file
+     */
     private String encryptFile(String filename) {
         try {
             byte[] fileData = Files.readAllBytes(Paths.get(filename));

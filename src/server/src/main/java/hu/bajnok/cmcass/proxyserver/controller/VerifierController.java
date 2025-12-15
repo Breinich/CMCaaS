@@ -48,6 +48,13 @@ public class VerifierController {
         return ResponseEntity.ok(enclavePublicKey_b64);
     }
 
+    /**
+     * Agree on shared encryption key with the enclave
+     * @param user Authenticated user details
+     * @param clientDataB64 Base64 encoded client data
+     * @param processKey Public key of the enclave process
+     * @return Response message
+     */
     @PostMapping(value = "/agree", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<String> agreeWithEnclave(@AuthenticationPrincipal UserDetails user,
                                                    @RequestParam("clientData") String clientDataB64,
@@ -63,6 +70,13 @@ public class VerifierController {
         return ResponseEntity.ok("Successfully agreed on the shared encryption key.");
     }
 
+    /**
+     * Get enclave quote
+     * @param user Authenticated user details
+     * @param processKey Public key of the enclave process
+     * @param encryptedNonceB64 Base64 encoded encrypted nonce
+     * @return Base64 encoded enclave quote
+     */
     @PostMapping(value ="/quote", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<String> getEnclaveQuote(@AuthenticationPrincipal UserDetails user,
                                                   @RequestParam("publicKey") String processKey,
@@ -111,6 +125,12 @@ public class VerifierController {
 
     }
 
+    /**
+     * Get encrypted results from enclave
+     * @param processKey Public key of the enclave process
+     * @param user Authenticated user details
+     * @return Encrypted results as byte array
+     */
     @GetMapping(value = "/process", produces = MediaType.APPLICATION_OCTET_STREAM_VALUE)
     public ResponseEntity<byte[]> getEncryptedResults(
             @RequestParam("publicKey") String processKey,

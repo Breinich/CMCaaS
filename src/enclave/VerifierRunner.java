@@ -20,7 +20,11 @@ import java.util.zip.ZipOutputStream;
 import javax.crypto.*;
 import javax.crypto.spec.*;
 
-/** enclave.RobustEnclaveApp */
+/**
+ * VerifierRunner performs secure, E2E encrypted model verification.
+ * It listens for commands over a socket, handles key exchange, decrypts input files,
+ * runs the verification process, and encrypts the output files.
+ */
 public class VerifierRunner {
   private static final String SHARED_DIR = "/host";
   private static final String EXTRACTION_DIR = "/tmp/extracted";
@@ -44,7 +48,6 @@ public class VerifierRunner {
 
   /**
    * Export public key as Base64 (X.509 encoded)
-   *
    * @return Base64 string
    */
   private String exportPublicKey() {
@@ -53,7 +56,6 @@ public class VerifierRunner {
 
   /**
    * HKDF-SHA256 implementation
-   *
    * @param salt optional salt
    * @param ikm input keying material
    * @param info optional context and application-specific information
@@ -62,7 +64,6 @@ public class VerifierRunner {
    */
   private static byte[] hkdfSha256(byte[] salt, byte[] ikm, byte[] info, int outputLen)
       throws Exception {
-    // Extract
     Mac hmac = Mac.getInstance("HmacSHA256");
     if (salt == null || salt.length == 0) {
       salt = new byte[32]; // zeros
@@ -71,7 +72,6 @@ public class VerifierRunner {
     hmac.init(saltKey);
     byte[] prk = hmac.doFinal(ikm);
 
-    // Expand
     int hashLen = 32;
     int n = (outputLen + hashLen - 1) / hashLen;
     byte[] okm = new byte[0];
@@ -91,7 +91,6 @@ public class VerifierRunner {
 
   /**
    * Concatenate two byte arrays
-   *
    * @param a first byte array
    * @param b second byte array
    * @return concatenated byte array
@@ -105,7 +104,6 @@ public class VerifierRunner {
 
   /**
    * Derive an AES key from ECDH shared secret
-   *
    * @param peerPub the client's public key
    * @return derived AES key
    */
@@ -115,7 +113,6 @@ public class VerifierRunner {
     ka.doPhase(peerPub, true);
     byte[] sharedSecret = ka.generateSecret();
 
-    // HKDF with optional info (context string)
     byte[] info = "enclave-ecdh-aes-256-gcm".getBytes(StandardCharsets.UTF_8);
     byte[] aesKeyBytes = hkdfSha256(null, sharedSecret, info, 32); // AES-256
     return new SecretKeySpec(aesKeyBytes, "AES");
@@ -153,7 +150,6 @@ public class VerifierRunner {
 
     /**
      * Decrypt data using AES-GCM
-     *
      * @param encryptedData encrypted data
      * @return decrypted data
      */
@@ -171,14 +167,11 @@ public class VerifierRunner {
 
   /**
    * Decrypt uploaded file
-   *
    * @param filename file name
    */
   private void decryptFile(String filename) throws Exception {
-    // Ensure decrypted directory exists
     java.nio.file.Files.createDirectories(java.nio.file.Paths.get(DECRYPTED_DIR));
 
-    // Read encrypted file
     Path inPath = Paths.get(SHARED_DIR, filename);
     Path outPath = Paths.get(DECRYPTED_DIR, filename);
 
@@ -187,17 +180,12 @@ public class VerifierRunner {
     }
 
     byte[] encFile = java.nio.file.Files.readAllBytes(inPath);
-    // Decrypt
     byte[] decFile = decryptData(encFile);
 
-    // Ensure parent directories for the output file exist
     if (outPath.getParent() != null) {
       java.nio.file.Files.createDirectories(outPath.getParent());
     }
-
-    // Write the decrypted file
     java.nio.file.Files.write(outPath, decFile);
-
     System.out.println("Decrypted file: " + filename);
   }
 
@@ -214,7 +202,6 @@ public class VerifierRunner {
   private Path processFile(String filename) {
     System.out.println("Processing file: " + filename);
 
-    // Ensure extraction and output directories exist
     try {
       java.nio.file.Files.createDirectories(java.nio.file.Paths.get(EXTRACTION_DIR));
       java.nio.file.Files.createDirectories(java.nio.file.Paths.get(OUTPUT_DIR));
@@ -222,7 +209,6 @@ public class VerifierRunner {
       throw new RuntimeException("Unable to create working directories: " + e.getMessage(), e);
     }
 
-    // extract the zip file
     try (ZipInputStream zis =
         new ZipInputStream(new FileInputStream(Paths.get(DECRYPTED_DIR, filename).toFile()))) {
       ZipEntry entry;
@@ -231,7 +217,6 @@ public class VerifierRunner {
         if (entry.isDirectory()) {
           outFile.mkdirs();
         } else {
-          // Ensure parent exists
           File parent = outFile.getParentFile();
           if (parent != null && !parent.exists()) parent.mkdirs();
           try (FileOutputStream fos = new FileOutputStream(outFile)) {
@@ -250,7 +235,6 @@ public class VerifierRunner {
 
     System.out.println("Starting verification...");
 
-    // Prepare command arguments for the external verifier
     String inputFilePath = null;
     String propertyFilePath = null;
 
@@ -287,7 +271,6 @@ public class VerifierRunner {
     }
 
     try {
-      // Build full command: executable + input + properties
       List<String> command = new ArrayList<>();
       command.add("/usr/lib/jvm/java-21-openjdk-amd64/bin/java");
       command.add("-Xss1m");

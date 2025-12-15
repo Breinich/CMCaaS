@@ -79,6 +79,11 @@ public class DataBaseService {
                 .orElse(0) + 1;
     }
 
+    /**
+     * Register a new user.
+     * @param username username of the new user
+     * @param password password of the new user
+     */
     @Transactional
     public void registerUser(String username, String password) {
         if (userRepository.findByUsername(username).isPresent()) {
@@ -91,6 +96,12 @@ public class DataBaseService {
         userRepository.save(user);
     }
 
+    /**
+     * Check if a verification process is in progress for a user.
+     * @param username username of the user
+     * @param processKey key of the process
+     * @return true if the process is running, false otherwise
+     */
     public boolean isVerificationInProgress(String username, String processKey) {
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new UsernameNotFoundException("User not found"));
@@ -129,14 +140,26 @@ public class DataBaseService {
         return process.getStatus();
     }
 
-    public boolean doesVerificationExist(String username, String processKey) {
+    /**
+     * Check if a verification process is in progress for a user.
+     * @param username username of the user
+     * @param processKey key of the process
+     * @return true if the process is running, false otherwise
+     */
+    public boolean verificationMissing(String username, String processKey) {
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new UsernameNotFoundException("User not found"));
         Process process = processRepository.findByKeyAndUser_Id(processKey, user.getId())
                 .orElse(null);
-        return process != null;
+        return process == null;
     }
 
+    /**
+     * Get the PID of a process by its key for a specific user.
+     * @param username username of the user
+     * @param processKey key of the process
+     * @return PID of the process
+     */
     public long getProcessPid(String username, String processKey) {
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new UsernameNotFoundException("User not found"));

@@ -43,26 +43,22 @@ int main(int argc, char *argv[]) {
     uint8_t *quote_buffer = base64_decode(argv[1], &quote_size);
     if (!quote_buffer) { printf("Invalid Base64\n"); return 1; }
 
-	printf("quote size = %d\n", quote_size);
-	printf("handle based quote size = %d\n", dcap_get_quote_size(handle));
-
     sgx_quote3_t *p_quote = (sgx_quote3_t *)quote_buffer;
     sgx_report_body_t *p_rep_body = (sgx_report_body_t *)(&p_quote->report_body);
     sgx_report_data_t *p_rep_data = (sgx_report_data_t *)(&p_rep_body->report_data);
-
-    printf("nonce: %s\n", nonce);
-    printf("Report Data in Quote: %s\n", p_rep_data->d);
 
     size_t nonce_len = strlen(nonce);
     if (nonce_len > sizeof(p_rep_data->d)) {
         nonce_len = sizeof(p_rep_data->d); // Truncate if too long
     }
 
-    if (memcmp((void *)p_rep_data->d, (void *)nonce, nonce_len) != 0)
+    if (memcmp((void *)p_rep_data->d, (void *)nonce, nonce_len) != 0) {
         printf("Error: Nonce mismatch in report data.\n");
+        exit_code = -1;
+        goto CLEANUP;
+    }
 
     uint32_t supplemental_size = dcap_get_supplemental_data_size(handle);
-    printf("supplemental_size size = %d\n", supplemental_size);
     uint8_t *p_supplemental_buffer = (uint8_t *)malloc(supplemental_size);
     if (NULL == p_supplemental_buffer) {
         printf("Couldn't allocate supplemental buffer\n");
