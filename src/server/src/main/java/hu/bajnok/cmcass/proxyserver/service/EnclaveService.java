@@ -79,7 +79,7 @@ public class EnclaveService {
           });
 
       int attempts = 0;
-      final int maxAttempts = 300; // max 300 seconds
+      final int maxAttempts = 300; // max 300*3=900 seconds
       boolean started = false;
 
       while (attempts < maxAttempts) {
@@ -97,7 +97,7 @@ public class EnclaveService {
           break;
         } catch (IOException e) {
           try {
-            Thread.sleep(1000);
+            Thread.sleep(3000);
             attempts++;
           } catch (InterruptedException ie) {
             ie.printStackTrace();
