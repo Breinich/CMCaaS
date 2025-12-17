@@ -1,0 +1,20 @@
+@startuml
+
+autonumber
+
+"Client Software" as client -> "Enclave Proxy Server" as proxy: Initialization request
+proxy -> "Verification Job" as enclave: Forward request
+enclave -> enclave: Generate EC keypair
+enclave --> proxy: EC public Key
+proxy --> client: Forward response
+client -> client : Derive ECDH shared secret
+client -> client : Expand shared secret into AES key
+client -> proxy : Share key materials
+proxy -> enclave: Forward key materials
+enclave -> enclave : Derive ECDH shared secret
+enclave -> enclave : Expand shared secret into AES key
+enclave --> proxy : Acknowledgment
+proxy --> client : Forward acknowledgment
+
+== Secure Channel Established ==
+@enduml
