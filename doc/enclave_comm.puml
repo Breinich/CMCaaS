@@ -1,0 +1,42 @@
+@startuml
+footer This is %page% of %lastpage%
+autonumber
+
+"Enclave Proxy Server" as proxy -> "Verification Job (enclave)" as enclave **: <<create>>
+
+== Initialization ==
+
+proxy -> enclave : "init" command
+activate enclave
+
+enclave -> enclave : Generate EC keypair
+enclave --> proxy: EC public Key
+
+== Handshake ==
+
+proxy -> enclave : "handshake" command
+proxy -> enclave : Client's key materials
+enclave -> enclave : Create shared encryption key
+enclave --> proxy : "OK" response
+
+newpage
+
+== Attestation ==
+
+proxy -> enclave : "quote" command
+proxy -> enclave : Encrypted nonce
+enclave -> enclave : Generate quote
+enclave --> proxy : Encrypted quote
+
+== Verification ==
+
+proxy -> enclave : "process" command
+proxy -> enclave : Name of encrypted input file
+enclave -> enclave : Do the verification job
+enclave --> proxy : Name of encrypted output file
+
+== Teardown ==
+proxy -> enclave : "stop" command
+destroy enclave
+
+@enduml
