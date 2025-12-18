@@ -4,7 +4,7 @@ left to right direction
 
 interface "TCP API" as TCP
 interface "HTTP/REST API" as HTTP
-interface "SQL / TCP" as SQL
+interface "SQL API" as SQL
 
 package "Verification Job"
 
