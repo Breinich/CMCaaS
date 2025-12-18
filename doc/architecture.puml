@@ -50,9 +50,6 @@ tcp_api -- enclave1 : <<provides>>
 enclave_int -- enclave2
 tcp_api -- enclave2 : <<provides>>
 
-enclave1 --( pccs_api : Request quote
-enclave2 --( pccs_api : Request quote
-
 proxy --( enclave_int : Dispatch
 proxy --( tcp_api : <<uses>>
 
