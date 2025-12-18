@@ -25,7 +25,7 @@ node "Host Server" {
         component "Verification Job\n[Enclave B]" as enclave2 #LightGreen
     }
 
-    ' -- Interfaces Definitions --
+    ' -- Interface Definitions --
 
     interface "HTTP/REST API" as http_int
     interface "SQL / TCP" as db_int
