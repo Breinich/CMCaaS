@@ -10,7 +10,7 @@ proxy -> enclave : "init" command
 activate enclave
 
 enclave -> enclave : Generate EC keypair
-enclave --> proxy: EC public Key
+enclave --> proxy: EC public key
 
 == Handshake ==
 
