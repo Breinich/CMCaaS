@@ -47,7 +47,7 @@ proxy --( db_int : <<uses>>
 
 enclave_int -- enclave1 : <<provides>>
 tcp_api -- enclave1 : <<provides>>
-enclave_int -- enclave2
+enclave_int -- enclave2 : <<provides>>
 tcp_api -- enclave2 : <<provides>>
 
 proxy --( enclave_int : Dispatch
