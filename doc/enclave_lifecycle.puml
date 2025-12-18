@@ -1,0 +1,10 @@
+@startuml
+
+[*] -> CREATED
+CREATED -> RUNNING
+RUNNING --> COMPLETED
+RUNNING --> ERROR
+COMPLETED #LIGHTGREEN --> [*]
+ERROR #PINK --> [*]
+
+@enduml
