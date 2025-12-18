@@ -1,0 +1,32 @@
+@startuml
+left to right direction
+
+
+interface "TCP API" as TCP
+interface "HTTP/REST API" as HTTP
+interface "SQL API" as SQL
+
+package "Verification Job"
+
+    TCP - "Verification Job"
+
+
+database "SQLite" as DB
+
+SQL - DB
+
+package "Enclave Proxy Server" as EPS {
+
+    HTTP - [WEB layer]
+    [Persistence layer] -( SQL
+
+    [Orchestration layer] -( TCP
+    [Orchestration layer] - [Persistence layer]
+
+    [WEB layer] - [Orchestration layer]
+
+}
+
+
+
+@enduml

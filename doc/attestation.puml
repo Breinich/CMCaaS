@@ -1,0 +1,40 @@
+@startuml
+autonumber
+skinparam MaxMessageSize 200
+
+participant "Client Software" as client
+participant "Enclave Proxy Server (untrusted)" as proxy
+box "TEE (Intel SGX)" #LightBlue
+    participant "Verification Job" as enclave
+end box
+participant "Intel CSSP / PCS" as intel
+
+client -> proxy: Request Quote for Attestation (EncryptedNonce)
+activate proxy
+proxy -> enclave: Forward Request
+activate enclave
+enclave -> enclave: Decrypt Nonce
+enclave -> enclave: Generate Quote
+enclave -> enclave: Encrypt Quote
+
+enclave --> proxy: EncryptedQuote
+deactivate enclave
+proxy --> client: EncryptedQuote
+deactivate proxy
+
+client -> client: Decrypt Quote
+client -> intel: Fetch Collateral (PCK Certs, CRL, TCB Info)
+activate intel
+intel --> client: Attestation Collateral
+deactivate intel
+
+client -> client: Verify Quote Signature with Intel Root CA
+client -> client: Verify MRENCLAVE == Expected Golden Hash
+client -> client: Verify MRSIGNER == Expected Developer Key
+client -> client: Verify Nonce matches ReportData
+
+alt Verification Failure
+    client -> client: Abort Connection (Security Alert)
+end
+
+@enduml

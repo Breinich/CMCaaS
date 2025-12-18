@@ -1,0 +1,13 @@
+@startuml
+
+start
+:get encrypted input file;
+:decrypt input file;
+:extract input file;
+:run verification job;
+:pack results;
+:encrypt output file;
+:provide output file;
+stop
+
+@enduml

@@ -1,0 +1,39 @@
+@startuml
+left to right direction
+skinparam nodesep 40
+
+!define RCECP_COLOR #1E90FF
+
+
+node "Remote Device" {
+    component "Client Software" as client_app
+}
+
+node "Host Server" {
+
+    component "Enclave Proxy\nServer" as proxy
+
+
+    package "Trusted Execution Env (TEE)" {
+        component "Verification Job\n[Enclave A]" as enclave1 #LightGreen
+        component "Verification Job\n[Enclave B]" as enclave2 #LightGreen
+    }
+
+
+}
+
+' --- Relationships ---
+
+client_app <..> proxy RCECP_COLOR : <font color=RCECP_COLOR><b>RCECP Packet</b>\n<font color=RCECP_COLOR>(under HTTP)
+
+proxy <..> enclave1 RCECP_COLOR : <font color=RCECP_COLOR><b>RCECP Packet</b>\n<font color=RCECP_COLOR>(under TCP)
+proxy <..> enclave2 RCECP_COLOR : <font color=RCECP_COLOR><b>RCECP Packet</b>\n<font color=RCECP_COLOR>(under TCP)
+
+
+' --- Notes ---
+note bottom of proxy
+  Forwarding RCECP packets
+  without modifying them
+end note
+
+@enduml

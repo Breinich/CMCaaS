@@ -1,0 +1,14 @@
+@startuml
+
+start
+if (verifier binary exist) then (true)
+  :init occlum instance;
+  :create enclave configuration;
+else (false)
+  stop
+endif
+:build enclave image;
+:run verifier binary inside the enclave;
+stop
+
+@enduml
