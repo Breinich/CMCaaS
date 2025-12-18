@@ -3,18 +3,26 @@
 autonumber
 
 "Client Software" as client -> "Enclave Proxy Server" as proxy: Initialization request
+activate proxy
 proxy -> "Verification Job" as enclave: Forward request
+activate enclave
 enclave -> enclave: Generate EC keypair
 enclave --> proxy: EC public Key
+deactivate enclave
 proxy --> client: Forward response
+deactivate proxy
 client -> client : Derive ECDH shared secret
 client -> client : Expand shared secret into AES key
 client -> proxy : Share key materials
+activate proxy
 proxy -> enclave: Forward key materials
+activate enclave
 enclave -> enclave : Derive ECDH shared secret
 enclave -> enclave : Expand shared secret into AES key
-enclave --> proxy : Acknowledgment
-proxy --> client : Forward acknowledgment
 
+enclave --> proxy : Acknowledgment
+deactivate enclave
+proxy --> client : Forward acknowledgment
+deactivate proxy
 == Secure Channel Established ==
 @enduml
