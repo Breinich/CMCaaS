@@ -6,7 +6,7 @@ autonumber
 activate proxy
 proxy -> "Verification Job" as enclave: Forward request
 activate enclave
-enclave -> enclave: Generate EC keypair
+enclave -> enclave: Generate EC key pair
 enclave --> proxy: EC public Key
 deactivate enclave
 proxy --> client: Forward response
