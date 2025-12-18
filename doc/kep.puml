@@ -7,7 +7,7 @@ activate proxy
 proxy -> "Verification Job" as enclave: Forward request
 activate enclave
 enclave -> enclave: Generate EC key pair
-enclave --> proxy: EC public Key
+enclave --> proxy: EC public key
 deactivate enclave
 proxy --> client: Forward response
 deactivate proxy
