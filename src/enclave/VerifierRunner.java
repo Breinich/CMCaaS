@@ -424,8 +424,12 @@ public class VerifierRunner {
     BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
     StringBuilder output = new StringBuilder();
     String line;
+    int ct = 0;
     while ((line = reader.readLine()) != null) {
-      output.append(line);
+      if (ct++ == 0)
+        output.append(line);
+      else
+        System.out.println("OTHER_OUTPUT: " + line);
     }
 
     int exitCode = process.waitFor();
@@ -494,7 +498,6 @@ public class VerifierRunner {
         System.out.println("DECRYPTED_QUOTE_NONCE=" + nonce);
 
         String quoteB64 = getQuoteFromSubprocess(nonce);
-        System.out.println("QUOTE_BASE64=" + quoteB64);
 
         String encryptedQuote =
             Base64.getEncoder()

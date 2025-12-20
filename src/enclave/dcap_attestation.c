@@ -86,6 +86,18 @@ void main(int argc, char *argv[]) {
 
     char* b64_quote = base64_encode(p_quote_buffer, quote_size);
     printf("%s", b64_quote);
+
+    char* b64_mrenclave = base64_encode(
+        ((sgx_quote3_t *)p_quote_buffer)->report_body.mr_enclave.m,
+        sizeof(((sgx_quote3_t *)p_quote_buffer)->report_body.mr_enclave.m)
+    );
+    printf("\n%s", b64_mrenclave);)
+
+    char* b64_mrsigner = base64_encode(
+        ((sgx_quote3_t *)p_quote_buffer)->report_body.mr_signer.m,
+        sizeof(((sgx_quote3_t *)p_quote_buffer)->report_body.mr_signer.m)
+    );
+    printf("\n%s", b64_mrsigner);
     goto CLEANUP;
 
 CLEANUP:
