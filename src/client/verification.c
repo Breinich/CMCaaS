@@ -74,12 +74,30 @@ int main(int argc, char *argv[]) {
 
     if (memcmp((void *)p_rep_body->mr_enclave.m, (void *)MRENCLAVE, sizeof(MRENCLAVE)) != 0) {
         printf("Error: MRENCLAVE mismatch in report data.\n");
+        printf("Expected MRENCLAVE: ");
+        for (size_t i = 0; i < sizeof(MRENCLAVE); i++) {
+            printf("%02x", MRENCLAVE[i]);
+        }
+        printf("\nActual MRENCLAVE:   ");
+        for (size_t i = 0; i < sizeof(p_rep_body->mr_enclave.m); i++) {
+            printf("%02x", p_rep_body->mr_enclave.m[i]);
+        }
+        printf("\n");
         exit_code = -1;
         goto CLEANUP;
     }
 
     if (memcmp((void *)p_rep_body->mr_signer.m, (void *)MRSIGNER, sizeof(MRSIGNER)) != 0) {
         printf("Error: MRSIGNER mismatch in report data.\n");
+        printf("Expected MRSIGNER: ");
+        for (size_t i = 0; i < sizeof(MRSIGNER); i++) {
+            printf("%02x", MRSIGNER[i]);
+        }
+        printf("\nActual MRSIGNER:   ");
+        for (size_t i = 0; i < sizeof(p_rep_body->mr_signer.m); i++) {
+            printf("%02x", p_rep_body->mr_signer.m[i]);
+        }
+        printf("\n");
         exit_code = -1;
         goto CLEANUP;
     }
