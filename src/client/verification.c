@@ -25,7 +25,7 @@ const unsigned char MRSIGNER[] = {
     0x70, 0xee, 0x1d, 0xfc, 0x08, 0xc7, 0xce, 0x9e
 };
 
-unsigned char* base64_decode(const char* encoded_data, size_t* output_length) {
+unsigned char* base64_decode(const char* encoded_data, uint32_t* output_length) {
     BIO *bio, *b64;
     size_t input_length = strlen(encoded_data);
 
@@ -72,13 +72,13 @@ int main(int argc, char *argv[]) {
         goto CLEANUP;
     }
 
-    if (memcmp((void *)p_rep_data->mr_enclave.m, (void *)MRENCLAVE, sizeof(MRENCLAVE)) != 0) {
+    if (memcmp((void *)p_rep_body->mr_enclave.m, (void *)MRENCLAVE, sizeof(MRENCLAVE)) != 0) {
         printf("Error: MRENCLAVE mismatch in report data.\n");
         exit_code = -1;
         goto CLEANUP;
     }
 
-    if (memcmp((void *)p_rep_data->mr_signer.m, (void *)MRSIGNER, sizeof(MRSIGNER)) != 0) {
+    if (memcmp((void *)p_rep_body->mr_signer.m, (void *)MRSIGNER, sizeof(MRSIGNER)) != 0) {
         printf("Error: MRSIGNER mismatch in report data.\n");
         exit_code = -1;
         goto CLEANUP;
