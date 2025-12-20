@@ -325,7 +325,6 @@ public class VerifierRunner {
 
       if (exitCode != 0) {
         System.err.println("Verification process failed with exit code: " + exitCode);
-        throw new RuntimeException("Verification process failed with exit code: " + exitCode);
       } else {
         System.out.println("Verification completed successfully.");
       }
@@ -339,7 +338,7 @@ public class VerifierRunner {
       } catch (IOException ioException) {
         System.err.println("Unable to read log file: " + ioException.getMessage());
       }
-      throw new RuntimeException("Error during verification process: " + e.getMessage(), e);
+      throw new RuntimeException("Error during verification: " + e.getMessage(), e);
     }
 
     Path result_zip = Paths.get(OUTPUT_DIR, "results.zip");
