@@ -91,7 +91,7 @@ void main(int argc, char *argv[]) {
         ((sgx_quote3_t *)p_quote_buffer)->report_body.mr_enclave.m,
         sizeof(((sgx_quote3_t *)p_quote_buffer)->report_body.mr_enclave.m)
     );
-    printf("\n%s", b64_mrenclave);)
+    printf("\n%s", b64_mrenclave);
 
     char* b64_mrsigner = base64_encode(
         ((sgx_quote3_t *)p_quote_buffer)->report_body.mr_signer.m,
