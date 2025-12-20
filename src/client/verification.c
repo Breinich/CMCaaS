@@ -11,6 +11,20 @@
 
 #include "occlum_dcap.h"
 
+const unsigned char MRENCLAVE[] = {
+    0xe0, 0xcf, 0x24, 0x74, 0xf0, 0x50, 0x02, 0xbc,
+    0xf9, 0x7b, 0x21, 0xd3, 0xa0, 0x36, 0x36, 0x20,
+    0xd2, 0x25, 0xc1, 0x35, 0x83, 0x11, 0x55, 0xe7,
+    0x1b, 0x7c, 0x4d, 0xc4, 0xc7, 0xf5, 0xa2, 0xe3
+};
+
+const unsigned char MRSIGNER[] = {
+    0x83, 0xd7, 0x19, 0xe7, 0x7d, 0xea, 0xca, 0x14,
+    0x70, 0xf6, 0xba, 0xf6, 0x2a, 0x4d, 0x77, 0x43,
+    0x03, 0xc8, 0x99, 0xdb, 0x69, 0x02, 0x0f, 0x9c,
+    0x70, 0xee, 0x1d, 0xfc, 0x08, 0xc7, 0xce, 0x9e
+};
+
 unsigned char* base64_decode(const char* encoded_data, size_t* output_length) {
     BIO *bio, *b64;
     size_t input_length = strlen(encoded_data);
@@ -54,6 +68,18 @@ int main(int argc, char *argv[]) {
 
     if (memcmp((void *)p_rep_data->d, (void *)nonce, nonce_len) != 0) {
         printf("Error: Nonce mismatch in report data.\n");
+        exit_code = -1;
+        goto CLEANUP;
+    }
+
+    if (memcmp((void *)p_rep_data->mr_enclave.m, (void *)MRENCLAVE, sizeof(MRENCLAVE)) != 0) {
+        printf("Error: MRENCLAVE mismatch in report data.\n");
+        exit_code = -1;
+        goto CLEANUP;
+    }
+
+    if (memcmp((void *)p_rep_data->mr_signer.m, (void *)MRSIGNER, sizeof(MRSIGNER)) != 0) {
+        printf("Error: MRSIGNER mismatch in report data.\n");
         exit_code = -1;
         goto CLEANUP;
     }

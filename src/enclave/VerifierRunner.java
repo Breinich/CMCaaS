@@ -422,23 +422,15 @@ public class VerifierRunner {
     Process process = builder.start();
 
     BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
-    StringBuilder output = new StringBuilder();
-    String line;
-    int ct = 0;
-    while ((line = reader.readLine()) != null) {
-      if (ct++ == 0)
-        output.append(line);
-      else
-        System.out.println("OTHER_OUTPUT: " + line);
-    }
+    String line = reader.readLine();
 
     int exitCode = process.waitFor();
     if (exitCode != 0) {
       throw new RuntimeException(
-          "Quote generation failed. Exit code: " + exitCode + ". Output: " + output);
+          "Quote generation failed. Exit code: " + exitCode + ". Output: " + line);
     }
 
-    return output.toString().trim();
+    return line.trim();
   }
 
   public VerifierRunner(int port) throws Exception {
