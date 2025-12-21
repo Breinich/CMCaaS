@@ -11,7 +11,21 @@
 
 #include "occlum_dcap.h"
 
-unsigned char* base64_decode(const char* encoded_data, size_t* output_length) {
+const unsigned char MRENCLAVE[] = {
+    0x16, 0x0f, 0xa9, 0x3a, 0x39, 0x17, 0xa0, 0x3e,
+    0x25, 0xc9, 0xb3, 0x8a, 0x31, 0x0e, 0xe0, 0x17,
+    0x38, 0xd5, 0xf2, 0x0e, 0x52, 0xa3, 0xc7, 0x1f,
+    0xcc, 0x00, 0x01, 0x11, 0x65, 0x85, 0x88, 0xef
+};
+
+const unsigned char MRSIGNER[] = {
+    0x83, 0xd7, 0x19, 0xe7, 0x7d, 0xea, 0xca, 0x14,
+    0x70, 0xf6, 0xba, 0xf6, 0x2a, 0x4d, 0x77, 0x43,
+    0x03, 0xc8, 0x99, 0xdb, 0x69, 0x02, 0x0f, 0x9c,
+    0x70, 0xee, 0x1d, 0xfc, 0x08, 0xc7, 0xce, 0x9e
+};
+
+unsigned char* base64_decode(const char* encoded_data, uint32_t* output_length) {
     BIO *bio, *b64;
     size_t input_length = strlen(encoded_data);
 
@@ -54,6 +68,36 @@ int main(int argc, char *argv[]) {
 
     if (memcmp((void *)p_rep_data->d, (void *)nonce, nonce_len) != 0) {
         printf("Error: Nonce mismatch in report data.\n");
+        exit_code = -1;
+        goto CLEANUP;
+    }
+
+    if (memcmp((void *)p_rep_body->mr_enclave.m, (void *)MRENCLAVE, sizeof(MRENCLAVE)) != 0) {
+        printf("Error: MRENCLAVE mismatch in report data.\n");
+        printf("Expected MRENCLAVE: ");
+        for (size_t i = 0; i < sizeof(MRENCLAVE); i++) {
+            printf("%02x", MRENCLAVE[i]);
+        }
+        printf("\nActual MRENCLAVE:   ");
+        for (size_t i = 0; i < sizeof(p_rep_body->mr_enclave.m); i++) {
+            printf("%02x", p_rep_body->mr_enclave.m[i]);
+        }
+        printf("\n");
+        exit_code = -1;
+        goto CLEANUP;
+    }
+
+    if (memcmp((void *)p_rep_body->mr_signer.m, (void *)MRSIGNER, sizeof(MRSIGNER)) != 0) {
+        printf("Error: MRSIGNER mismatch in report data.\n");
+        printf("Expected MRSIGNER: ");
+        for (size_t i = 0; i < sizeof(MRSIGNER); i++) {
+            printf("%02x", MRSIGNER[i]);
+        }
+        printf("\nActual MRSIGNER:   ");
+        for (size_t i = 0; i < sizeof(p_rep_body->mr_signer.m); i++) {
+            printf("%02x", p_rep_body->mr_signer.m[i]);
+        }
+        printf("\n");
         exit_code = -1;
         goto CLEANUP;
     }

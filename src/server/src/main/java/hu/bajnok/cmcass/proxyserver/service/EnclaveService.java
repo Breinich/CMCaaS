@@ -3,7 +3,6 @@ package hu.bajnok.cmcass.proxyserver.service;
 import hu.bajnok.cmcass.proxyserver.model.ProcessStatus;
 import java.io.*;
 import java.net.Socket;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -255,10 +254,10 @@ public class EnclaveService {
       logger.info("Verification is still in progress for user {} enclave {}", username, processKey);
       throw new IllegalStateException("Verification is still in progress.");
     } else if (status == ProcessStatus.ERROR) {
-      return "Verification ended with an error.".getBytes(StandardCharsets.UTF_8);
+      logger.warn("Verification ended with an error for user {} enclave {}", username, processKey);
+    } else {
+      logger.info("Verification ended successfully for user {} enclave {}", username, processKey);
     }
-
-    logger.info("Verification ended successfully for user {} enclave {}", username, processKey);
 
     int processPort = dbService.getProcessPort(username, processKey);
     Path outputPath = Paths.get(ENCLAVE_PREFIX + (BASE_PORT + processPort), OUTPUT_FILE);

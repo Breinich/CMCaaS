@@ -325,7 +325,6 @@ public class VerifierRunner {
 
       if (exitCode != 0) {
         System.err.println("Verification process failed with exit code: " + exitCode);
-        throw new RuntimeException("Verification process failed with exit code: " + exitCode);
       } else {
         System.out.println("Verification completed successfully.");
       }
@@ -339,7 +338,7 @@ public class VerifierRunner {
       } catch (IOException ioException) {
         System.err.println("Unable to read log file: " + ioException.getMessage());
       }
-      throw new RuntimeException("Error during verification process: " + e.getMessage(), e);
+      throw new RuntimeException("Error during verification: " + e.getMessage(), e);
     }
 
     Path result_zip = Paths.get(OUTPUT_DIR, "results.zip");
@@ -422,19 +421,15 @@ public class VerifierRunner {
     Process process = builder.start();
 
     BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
-    StringBuilder output = new StringBuilder();
-    String line;
-    while ((line = reader.readLine()) != null) {
-      output.append(line);
-    }
+    String line = reader.readLine();
 
     int exitCode = process.waitFor();
     if (exitCode != 0) {
       throw new RuntimeException(
-          "Quote generation failed. Exit code: " + exitCode + ". Output: " + output);
+          "Quote generation failed. Exit code: " + exitCode + ". Output: " + line);
     }
 
-    return output.toString().trim();
+    return line.trim();
   }
 
   public VerifierRunner(int port) throws Exception {
@@ -494,7 +489,6 @@ public class VerifierRunner {
         System.out.println("DECRYPTED_QUOTE_NONCE=" + nonce);
 
         String quoteB64 = getQuoteFromSubprocess(nonce);
-        System.out.println("QUOTE_BASE64=" + quoteB64);
 
         String encryptedQuote =
             Base64.getEncoder()
