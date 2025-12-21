@@ -84,8 +84,8 @@ jobs:
         if: github.event_name != 'pull_request'
         env:
           TAGS: |
-            ${{ env.REGISTRY }}/${{ steps.set-image.outputs.image_name }}:latest
-            ${{ env.REGISTRY }}/${{ steps.set-image.outputs.image_name }}:${{ github.sha }}
+            ${{ env.REGISTRY }}/${{ steps.set-image.outputs.image_name }}-server:latest
+            ${{ env.REGISTRY }}/${{ steps.set-image.outputs.image_name }}-server:${{ github.sha }}
           DIGEST: ${{ steps.build-and-push-sgx.outputs.digest }}
         run: echo "${TAGS}" | xargs -I {} cosign sign --yes {}@${DIGEST}
 
@@ -93,8 +93,8 @@ jobs:
         if: github.event_name != 'pull_request'
         env:
           TAGS: |
-            ${{ env.REGISTRY }}/${{ steps.set-image.outputs.image_name }}:sim
-            ${{ env.REGISTRY }}/${{ steps.set-image.outputs.image_name }}:sim-${{ github.sha }}
+            ${{ env.REGISTRY }}/${{ steps.set-image.outputs.image_name }}-server:sim
+            ${{ env.REGISTRY }}/${{ steps.set-image.outputs.image_name }}-server:sim-${{ github.sha }}
           DIGEST: ${{ steps.build-and-push-sim.outputs.digest }}
         run: echo "${TAGS}" | xargs -I {} cosign sign --yes {}@${DIGEST}
 
