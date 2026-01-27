@@ -9,24 +9,24 @@ import lombok.Setter;
 @Entity
 @Table(name = "processes")
 public class Process {
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+  @Id
+  @GeneratedValue(strategy = GenerationType.IDENTITY)
+  private Long id;
 
-    @Column(nullable = false, unique = true)
-    private int port;
+  @Column(nullable = false, unique = true)
+  private int port;
 
-    @Column(nullable = false, unique = true)
-    private String key;
+  @Column(nullable = false, unique = true)
+  private String key;
 
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
-    private ProcessStatus status;
+  @Enumerated(EnumType.STRING)
+  @Column(nullable = false)
+  private ProcessStatus status;
 
-    @Column(nullable = false)
-    private Long pid;
+  @Column(nullable = false)
+  private Long pid;
 
-    @ManyToOne
-    @JoinColumn(name = "user_id", referencedColumnName = "id", nullable = false)
-    private User user;
+  @ManyToOne
+  @JoinColumn(name = "user_id", referencedColumnName = "id", nullable = false)
+  private User user;
 }

@@ -1,17 +1,16 @@
 package hu.bajnok.cmcass.proxyserver.repository;
 
 import hu.bajnok.cmcass.proxyserver.model.Process;
+import java.util.List;
+import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 
-import java.util.List;
-import java.util.Optional;
-
 public interface ProcessRepository extends JpaRepository<Process, Integer> {
-    void deleteByKeyAndUser_Id(String key, Long userId);
+  void deleteByKeyAndUser_Id(String key, Long userId);
 
-    Optional<Process> findByKeyAndUser_Id(String key, Long userId);
+  Optional<Process> findByKeyAndUser_Id(String key, Long userId);
 
-    @Query("SELECT p.port FROM Process p")
-    List<Integer> findAllProcessPorts();
+  @Query("SELECT p.port FROM Process p")
+  List<Integer> findAllProcessPorts();
 }
